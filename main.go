@@ -88,10 +88,10 @@ func importData(ctx context.Context, collection *mongo.Collection, file string) 
     }
 
     // []struct to []interface
-    var doc interface{}
-    var docs []interface{}
+    var document interface{}
+    var documents []interface{}
     for _, u := range users {
-        doc = bson.D{
+        document = bson.D{
             {"_id", u.ID},
             {"user_name", u.UserName},
             {"real_name", u.RealName},
@@ -101,11 +101,11 @@ func importData(ctx context.Context, collection *mongo.Collection, file string) 
             {"create_at", u.CreateAt},
             {"update_at", u.CreateAt},
         }
-        docs = append(docs, doc)
+        documents = append(documents, document)
     }
 
     // insert many
-    _, err = collection.InsertMany(ctx, docs)
+    _, err = collection.InsertMany(ctx, documents)
     if err != nil {
         return nil
     }

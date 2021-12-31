@@ -67,7 +67,7 @@ retrieve user
 func (handler *UserHandler) RetrieveUserHandler(c *gin.Context) {
     pageIndex := c.DefaultQuery("pageIndex", "10")
     pageSize := c.DefaultQuery("pageSize", "30")
-    //sort := c.QueryMap("sort")
+    sort := c.QueryMap("sort")
     //filter := c.QueryMap("filter")
 
     index, _ := strconv.ParseInt(pageIndex, 10, 64)
@@ -79,28 +79,38 @@ func (handler *UserHandler) RetrieveUserHandler(c *gin.Context) {
 
     limitStage := bson.D{{"$limit", limit}}
     skipStage := bson.D{{"$skip", skip}}
+
+    // sort
+    var sorts []bson.E
+    for filed, order := range sort {
+        order, _ := strconv.ParseInt(order, 10, 64)
+        sorts = append(sorts, bson.E{filed, order})
+    }
+    sortStage := bson.D{{"$sort", sorts}}
+
+    // match
+    //id, _ := primitive.ObjectIDFromHex("61cd47b338e4acbd43065c44")
     matchStage := bson.D{{"$match", bson.M{}}}
 
     // pipeline
-    pipeline := mongo.Pipeline{limitStage, skipStage, matchStage}
+    pipeline := mongo.Pipeline{matchStage, skipStage, limitStage, sortStage}
     options := options.Aggregate().SetMaxTime(2 * time.Second)
 
     // aggregate
-    cur, err := handler.collection.Aggregate(handler.ctx, pipeline, options)
+    cursor, err := handler.collection.Aggregate(handler.ctx, pipeline, options)
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
-    defer cur.Close(handler.ctx)
+    defer cursor.Close(handler.ctx)
 
-    var users []interface{}
-    for cur.Next(handler.ctx) {
-        var document bson.M
-        cur.Decode(&document)
-        users = append(users, document)
+    var list []bson.M
+    if err = cursor.All(handler.ctx, &list); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
     }
 
-    c.JSON(http.StatusOK, users)
+    c.JSON(http.StatusOK, list)
 }
 
 /*
