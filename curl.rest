@@ -1,0 +1,19 @@
+@host = 127.0.0.1
+@port = 8000
+@contentType = application/json
+
+### create user
+POST http://{{host}}:{{port}}/user HTTP/1.1
+Content-Type: {{contentType}}
+
+{
+    "user_name": "user01",
+    "real_name": "user01",
+    "mobile": "13900000001",
+    "email": "user01@abc.com",
+    "password": "password"
+}
+
+### restrive user
+# GET http://{{host}}:{{port}}/user?page=5&size=20&sort[_id]=1&sort[create_at]=-1&filter[user_name]=user01 HTTP/1.1
+GET http://{{host}}:{{port}}/user?pageIndex=2&pageSize=20 HTTP/1.1
