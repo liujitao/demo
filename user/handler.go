@@ -2,7 +2,9 @@ package user
 
 import (
     "context"
+    "demo/common"
     "log"
+    "math"
     "net/http"
     "strconv"
     "time"
@@ -65,17 +67,50 @@ func (handler *UserHandler) CreateUserHandler(c *gin.Context) {
 retrieve user
 */
 func (handler *UserHandler) RetrieveUserHandler(c *gin.Context) {
-    pageIndex := c.DefaultQuery("pageIndex", "10")
-    pageSize := c.DefaultQuery("pageSize", "30")
     sort := c.QueryMap("sort")
-    //filter := c.QueryMap("filter")
 
-    index, _ := strconv.ParseInt(pageIndex, 10, 64)
-    size, _ := strconv.ParseInt(pageSize, 10, 64)
+    // match
+    //id, _ := primitive.ObjectIDFromHex("61cd47b338e4acbd43065c44")
+    filter := bson.M{}
+    if search := c.Query("search"); search != "" {
+        filter = bson.M{
+            "$or": []bson.M{
+                {
+                    "user_name": bson.M{"$regex": primitive.Regex{Pattern: search, Options: "i"}},
+                },
+                {
+                    "real_name": bson.M{"$regex": primitive.Regex{Pattern: search, Options: "i"}},
+                },
+                {
+                    "mobile": bson.M{"$regex": primitive.Regex{Pattern: search, Options: "i"}},
+                },
+                {
+                    "email": bson.M{"$regex": primitive.Regex{Pattern: search, Options: "i"}},
+                },
+                {
+                    "create_man": bson.M{"$regex": primitive.Regex{Pattern: search, Options: "i"}},
+                },
+                {
+                    "update_man": bson.M{"$regex": primitive.Regex{Pattern: search, Options: "i"}},
+                },
+            },
+        }
+    }
+    matchStage := bson.D{{"$match", filter}}
 
     // pagination
-    limit := size
-    skip := limit * (index - 1)
+    pageIndex, _ := strconv.ParseInt(c.DefaultQuery("pageIndex", "1"), 10, 64)
+    pageSize, _ := strconv.ParseInt(c.DefaultQuery("pageSize", "30"), 10, 64)
+
+    total, _ := handler.collection.CountDocuments(handler.ctx, filter)
+    pageTotal := int64(math.Ceil(float64(total) / float64(pageSize)))
+
+    limit := pageSize
+    skip := limit * (pageIndex - 1)
+    if pageIndex > pageTotal {
+        skip = 0
+        pageIndex = 1
+    }
 
     limitStage := bson.D{{"$limit", limit}}
     skipStage := bson.D{{"$skip", skip}}
@@ -88,15 +123,10 @@ func (handler *UserHandler) RetrieveUserHandler(c *gin.Context) {
     }
     sortStage := bson.D{{"$sort", sorts}}
 
-    // match
-    //id, _ := primitive.ObjectIDFromHex("61cd47b338e4acbd43065c44")
-    matchStage := bson.D{{"$match", bson.M{}}}
-
-    // pipeline
+    // aggregate
     pipeline := mongo.Pipeline{matchStage, skipStage, limitStage, sortStage}
     options := options.Aggregate().SetMaxTime(2 * time.Second)
 
-    // aggregate
     cursor, err := handler.collection.Aggregate(handler.ctx, pipeline, options)
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -104,12 +134,20 @@ func (handler *UserHandler) RetrieveUserHandler(c *gin.Context) {
     }
     defer cursor.Close(handler.ctx)
 
-    var list []bson.M
-    if err = cursor.All(handler.ctx, &list); err != nil {
+    var results []bson.M
+    if err = cursor.All(handler.ctx, &results); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
 
+    // output
+    list := &common.List{
+        Total:      total,
+        Page_total: pageTotal,
+        Page_index: pageIndex,
+        Page_size:  pageSize,
+        Rows:       results,
+    }
     c.JSON(http.StatusOK, list)
 }
 

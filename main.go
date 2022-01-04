@@ -2,6 +2,7 @@ package main
 
 import (
     "context"
+    "demo/common"
     "demo/user"
     "encoding/json"
     "io/ioutil"
@@ -15,22 +16,8 @@ import (
     "go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
-type Configure struct {
-    Mongo_host       string
-    Mongo_port       string
-    Mongo_user       string
-    Mongo_password   string
-    Mongo_database   string
-    Redis_host       string
-    Redis_port       string
-    Redis_password   string
-    App_host         string
-    App_port         string
-    App_release_mode bool
-}
-
 // variable
-var Config Configure
+var Config common.Configure
 var userHandler *user.UserHandler
 
 func init() {
