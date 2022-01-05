@@ -3,14 +3,15 @@ package user
 import (
     "context"
     "demo/common"
-    "log"
+    "encoding/json"
+    "fmt"
     "math"
     "net/http"
     "strconv"
     "time"
 
     "github.com/gin-gonic/gin"
-    "github.com/go-redis/redis"
+    "github.com/go-redis/redis/v8"
     "go.mongodb.org/mongo-driver/bson"
     "go.mongodb.org/mongo-driver/bson/primitive"
     "go.mongodb.org/mongo-driver/mongo"
@@ -38,16 +39,19 @@ func MewUserHandler(ctx context.Context, collection *mongo.Collection, redisClie
 }
 
 /*
-create user
+建立用户
 */
 func (handler *UserHandler) CreateUserHandler(c *gin.Context) {
+    // 参数parameter
     var user UserModel
     if err := c.ShouldBindJSON(&user); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
 
+    // 写入mongo
     user.ID = primitive.NewObjectID()
+    user.Password = common.SetPassword(user.Password)
     user.CreateAt = time.Now()
     user.UpdateAt = time.Now()
 
@@ -57,20 +61,20 @@ func (handler *UserHandler) CreateUserHandler(c *gin.Context) {
         return
     }
 
-    log.Println("Remove data from Redis")
-    handler.redisClient.Del("users")
+    // 写入redis
+    data, _ := json.Marshal(user)
+    handler.redisClient.Set(handler.ctx, user.ID.Hex(), data, time.Hour)
 
+    // 输出output
     c.JSON(http.StatusCreated, user)
+    return
 }
 
 /*
-retrieve user
+获取用户
 */
-func (handler *UserHandler) RetrieveUserHandler(c *gin.Context) {
-    sort := c.QueryMap("sort")
-
-    // match
-    //id, _ := primitive.ObjectIDFromHex("61cd47b338e4acbd43065c44")
+func (handler *UserHandler) RetriveUserHandler(c *gin.Context) {
+    // 条件匹配match
     filter := bson.M{}
     if search := c.Query("search"); search != "" {
         filter = bson.M{
@@ -98,7 +102,7 @@ func (handler *UserHandler) RetrieveUserHandler(c *gin.Context) {
     }
     matchStage := bson.D{{"$match", filter}}
 
-    // pagination
+    // 分页pagination
     pageIndex, _ := strconv.ParseInt(c.DefaultQuery("pageIndex", "1"), 10, 64)
     pageSize, _ := strconv.ParseInt(c.DefaultQuery("pageSize", "30"), 10, 64)
 
@@ -115,15 +119,15 @@ func (handler *UserHandler) RetrieveUserHandler(c *gin.Context) {
     limitStage := bson.D{{"$limit", limit}}
     skipStage := bson.D{{"$skip", skip}}
 
-    // sort
+    // 排序sort
     var sorts []bson.E
-    for filed, order := range sort {
+    for filed, order := range c.QueryMap("sort") {
         order, _ := strconv.ParseInt(order, 10, 64)
         sorts = append(sorts, bson.E{filed, order})
     }
     sortStage := bson.D{{"$sort", sorts}}
 
-    // aggregate
+    // 聚合查询aggregate
     pipeline := mongo.Pipeline{matchStage, skipStage, limitStage, sortStage}
     options := options.Aggregate().SetMaxTime(2 * time.Second)
 
@@ -134,31 +138,171 @@ func (handler *UserHandler) RetrieveUserHandler(c *gin.Context) {
     }
     defer cursor.Close(handler.ctx)
 
-    var results []bson.M
-    if err = cursor.All(handler.ctx, &results); err != nil {
+    var documents []bson.M
+    if err = cursor.All(handler.ctx, &documents); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
 
-    // output
+    // 输出output
     list := &common.List{
         Total:      total,
         Page_total: pageTotal,
         Page_index: pageIndex,
         Page_size:  pageSize,
-        Rows:       results,
+        Rows:       documents,
     }
     c.JSON(http.StatusOK, list)
+    return
 }
 
 /*
-update user
+更新用户
 */
 func (handler *UserHandler) UpdateUserHandler(c *gin.Context) {
+    // 参数parameter
+    id := c.Query("_id")
+    if id == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"message": "_id is null"})
+        return
+    }
+
+    var user UserModel
+    if err := c.ShouldBindJSON(&user); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+    // 写入mongo
+    _id, err := primitive.ObjectIDFromHex(id)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, err.Error())
+        return
+    }
+
+    filter := bson.M{"_id": _id}
+    options := options.FindOneAndUpdate().SetReturnDocument(1)
+    update := bson.M{
+        "$set": bson.M{
+            "user_name": user.UserName,
+            "real_name": user.RealName,
+            "mobile":    user.Mobile,
+            "email":     user.Email,
+            "update_at": time.Now(),
+        },
+    }
+
+    var document bson.M
+    result := handler.collection.FindOneAndUpdate(handler.ctx, filter, update, options)
+    if result == nil {
+        c.JSON(http.StatusBadRequest, gin.H{"message": result.Err().Error()})
+        return
+    }
+    result.Decode(&document)
+
+    // 写入redis
+    data, _ := json.Marshal(document)
+    handler.redisClient.Set(handler.ctx, id, data, time.Hour)
+
+    // 输出output
+    c.JSON(http.StatusOK, document)
+    return
 }
 
 /*
-delete user
+删除用户
 */
 func (handler *UserHandler) DeleteUserHandler(c *gin.Context) {
+    // 参数paramater
+    array := c.QueryArray("_id")
+    if len(array) == 0 {
+        c.JSON(http.StatusBadRequest, gin.H{"message": "_id is null"})
+        return
+    }
+
+    var _id []interface{}
+    for _, id := range array {
+        i, err := primitive.ObjectIDFromHex(id)
+        if err != nil {
+            c.JSON(http.StatusBadRequest, err.Error())
+            return
+        }
+        _id = append(_id, i)
+    }
+
+    // 写入mongo
+    filter := bson.M{"_id": bson.M{"$in": _id}}
+    result, err := handler.collection.DeleteMany(handler.ctx, filter)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, err.Error())
+        return
+    }
+
+    // 写入redis
+    for _, id := range array {
+        handler.redisClient.Del(handler.ctx, id)
+    }
+
+    // 输出output
+    c.JSON(http.StatusOK, result)
+}
+
+/*
+变更密码
+*/
+func (handler *UserHandler) UserChanegePasswordHandler(c *gin.Context) {
+    var userPassword UserPasswordModel
+    if err := c.ShouldBindJSON(&userPassword); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+    // 读取数据库
+    var document bson.M
+    filter := bson.M{"_id": userPassword.ID}
+    if result := handler.collection.FindOne(handler.ctx, filter); result != nil {
+        result.Decode(&document)
+    }
+
+    // 校验密码
+    passwordHash := fmt.Sprintf("%v", document["password"])
+    if err := common.VerifyPassword(passwordHash, userPassword.OldPassword); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"message": "old password miss"})
+        return
+    }
+
+    // 写入mongo
+    update := bson.M{
+        "$set": bson.M{
+            "password":  common.SetPassword(userPassword.NewPassword),
+            "update_at": time.Now(),
+        },
+    }
+
+    result := handler.collection.FindOneAndUpdate(handler.ctx, filter, update)
+    if result == nil {
+        c.JSON(http.StatusBadRequest, gin.H{"message": result.Err().Error()})
+        return
+    }
+    result.Decode(&document)
+
+    // 写入redis
+    data, _ := json.Marshal(document)
+    handler.redisClient.Set(handler.ctx, userPassword.ID.Hex(), data, time.Hour)
+
+    // 输出output
+    c.JSON(http.StatusOK, gin.H{"message": "ok"})
+    return
+}
+
+/*
+用户登录
+*/
+func (handler *UserHandler) UserLoginHandler(c *gin.Context) {
+}
+
+/*
+用户退出
+*/
+func (handler *UserHandler) UserLogoutHandler(c *gin.Context) {
 }

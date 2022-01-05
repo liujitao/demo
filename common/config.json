@@ -7,9 +7,11 @@
     "redis_host": "127.0.0.1",
     "redis_port": "6379",
     "redis_password": "",
+    "redis_expire_ttl": 3600,
     "app_host": "127.0.0.1",
     "app_port": "8000",
     "app_release_mode": false,
     "page_index": 1,
-    "page_size": 20
+    "page_size": 20,
+    "default_password": "abcd@1234"
 }

@@ -7,14 +7,43 @@ POST http://{{host}}:{{port}}/user HTTP/1.1
 Content-Type: {{contentType}}
 
 {
-    "user_name": "user01",
-    "real_name": "user01",
-    "mobile": "13900000001",
-    "email": "user01@abc.com",
+    "user_name": "user106",
+    "real_name": "user106",
+    "mobile": "13900000106",
+    "email": "user106@abc.com",
     "password": "password"
 }
 
-### restrive user
-#GET http://{{host}}:{{port}}/user?page=5&size=20&sort[_id]=1&sort[create_at]=-1&filter[user_name]=user01 HTTP/1.1
+### retrive user
+GET http://{{host}}:{{port}}/user?search=user9&pageIndex=1&pageSize=20&sort[user_name]=-1 HTTP/1.1
 
-GET http://{{host}}:{{port}}/user?search=user1&pageIndex=2&pageSize=10&sort[user_name]=-1 HTTP/1.1
+
+### update user
+PUT http://{{host}}:{{port}}/user?_id=61d52a3b3ccd8fb453ada83c HTTP/1.1
+Content-Type: {{contentType}}
+
+{
+    "user_name": "user996",
+    "real_name": "user996",
+    "mobile": "13900000996",
+    "email": "user996@abc.com"
+}
+
+### delete user
+DELETE http://{{host}}:{{port}}/user?_id=61cd47b338e4acbd43065c95&_id=61cd47b338e4acbd43065c94&_id=61cd47b338e4acbd43065c93&_id=61cd47b338e4acbd43065c92&_id=61d52a3b3ccd8fb453ada83c HTTP/1.1
+
+### user change password
+POST http://{{host}}:{{port}}/user/change_password HTTP/1.1
+Content-Type: {{contentType}}
+
+{
+    "_id": "61d52f2d4460b77d940a49e6",
+    "old_password": "123456",
+    "new_password": "password"
+}
+
+### user login
+POST http://{{host}}:{{port}}/user/login HTTP/1.1
+
+### user logout
+POST http://{{host}}:{{port}}/user/logout HTTP/1.1
