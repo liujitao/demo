@@ -10,6 +10,7 @@ import (
     "strconv"
     "time"
 
+    "github.com/dgrijalva/jwt-go"
     "github.com/gin-gonic/gin"
     "github.com/go-redis/redis/v8"
     "go.mongodb.org/mongo-driver/bson"
@@ -67,7 +68,6 @@ func (handler *UserHandler) CreateUserHandler(c *gin.Context) {
 
     // 输出output
     c.JSON(http.StatusCreated, user)
-    return
 }
 
 /*
@@ -153,7 +153,6 @@ func (handler *UserHandler) RetriveUserHandler(c *gin.Context) {
         Rows:       documents,
     }
     c.JSON(http.StatusOK, list)
-    return
 }
 
 /*
@@ -206,7 +205,6 @@ func (handler *UserHandler) UpdateUserHandler(c *gin.Context) {
 
     // 输出output
     c.JSON(http.StatusOK, document)
-    return
 }
 
 /*
@@ -292,13 +290,131 @@ func (handler *UserHandler) UserChanegePasswordHandler(c *gin.Context) {
 
     // 输出output
     c.JSON(http.StatusOK, gin.H{"message": "ok"})
-    return
+}
+
+/*
+认证中间件
+*/
+func AuthMiddleWare() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        // 参数
+        tokenString := c.GetHeader("Authorization")
+        if tokenString == "" {
+            c.JSON(http.StatusUnauthorized, gin.H{"message": "Token not found"})
+            return
+        }
+
+        // 解析token
+        token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+            return []byte(JWT_SECRET), nil
+        })
+
+        if err != nil {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+            return
+        }
+
+        if _, ok := token.Claims.(*CustomClaims); !ok && !token.Valid {
+            c.JSON(http.StatusUnauthorized, gin.H{"message": "Ivaild token"})
+            return
+        }
+
+        c.Next()
+    }
 }
 
 /*
 用户登录
 */
 func (handler *UserHandler) UserLoginHandler(c *gin.Context) {
+    // 参数parameter
+    var user UserLoginModel
+    if err := c.ShouldBindJSON(&user); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+    // mongo
+    var document bson.M
+    result := handler.collection.FindOne(handler.ctx, bson.M{"user_name": user.UserName})
+    if result == nil {
+        c.JSON(http.StatusBadRequest, gin.H{"message": result.Err().Error()})
+        return
+    }
+    result.Decode(&document)
+
+    // 校验用户密码
+    passwordHash := fmt.Sprintf("%v", document["password"])
+    if err := common.VerifyPassword(passwordHash, user.Password); err != nil {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "invaild password"})
+        return
+    }
+
+    // 生成JWT token
+    expirationTime := time.Now().Add(time.Minute * 15)
+    claims := &CustomClaims{
+        user.UserName,
+        jwt.StandardClaims{
+            ExpiresAt: expirationTime.Unix(),
+        },
+    }
+
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+    tokenString, err := token.SignedString([]byte(JWT_SECRET))
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    // 输出output
+    c.JSON(http.StatusOK, gin.H{"token": tokenString, "expires": expirationTime})
+}
+
+/*
+用户刷新
+*/
+func (handler *UserHandler) UserRefreshHandler(c *gin.Context) {
+    // 参数
+    tokenString := c.GetHeader("Authorization")
+    if tokenString == "" {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "Token not found"})
+        return
+    }
+
+    // 解析token
+    token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+        return []byte(JWT_SECRET), nil
+    })
+
+    if err != nil {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+        return
+    }
+
+    claims, ok := token.Claims.(*CustomClaims)
+    if !ok && !token.Valid {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "Ivaild token"})
+        return
+    }
+
+    // 判断过期
+    if time.Unix(claims.ExpiresAt, 0).Sub(time.Now()) > time.Second*30 {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Token is not expired yet"})
+        return
+    }
+    // 重新生成JWT token
+    expirationTime := time.Now().Add(time.Minute * 15)
+
+    claims.ExpiresAt = expirationTime.Unix()
+    newToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+    newTokenString, err := newToken.SignedString([]byte(JWT_SECRET))
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    // 输出output
+    c.JSON(http.StatusOK, gin.H{"token": newTokenString, "expires": expirationTime})
 }
 
 /*

@@ -64,6 +64,7 @@ func init() {
 }
 
 func main() {
+    // gin工作模式
     if Conf.App_release_mode {
         gin.SetMode(gin.ReleaseMode)
     }
@@ -71,14 +72,25 @@ func main() {
     router := gin.New()
     router.SetTrustedProxies([]string{})
 
-    // 访问路径
-    router.POST("/user", userHandler.CreateUserHandler)
-    router.GET("/user", userHandler.RetriveUserHandler)
-    router.PUT("/user", userHandler.UpdateUserHandler)
-    router.DELETE("/user", userHandler.DeleteUserHandler)
-    router.POST("/user/change_password", userHandler.UserChanegePasswordHandler)
-    router.POST("/user/login", userHandler.UserLoginHandler)
-    router.POST("/user/logout", userHandler.UserLogoutHandler)
+    // 使用认证中间件
+    authorized := router.Group("/")
+    authorized.Use(user.AuthMiddleWare())
+    {
+        // 用户
+        authorized.POST("/user", userHandler.CreateUserHandler)
+        authorized.GET("/user", userHandler.RetriveUserHandler)
+        authorized.PUT("/user", userHandler.UpdateUserHandler)
+        authorized.DELETE("/user", userHandler.DeleteUserHandler)
+        authorized.POST("/user/change_password", userHandler.UserChanegePasswordHandler)
+
+    }
+
+    // 不使用认证中间件
+    {
+        router.POST("/user/login", userHandler.UserLoginHandler)
+        router.POST("/user/logout", userHandler.UserLogoutHandler)
+        router.POST("/user/refresh", userHandler.UserRefreshHandler)
+    }
 
     router.Run(Conf.App_host + ":" + Conf.App_port)
 }

@@ -3,6 +3,7 @@ package user
 import (
     "time"
 
+    "github.com/dgrijalva/jwt-go"
     "go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -27,3 +28,16 @@ type UserPasswordModel struct {
     OldPassword string             `json:"old_password"`
     NewPassword string             `json:"new_password"`
 }
+
+type UserLoginModel struct {
+    UserName string `json:"user_name"`
+    Password string `json:"password"`
+}
+
+// jwt
+type CustomClaims struct {
+    UserName string `json:"username"`
+    jwt.StandardClaims
+}
+
+const JWT_SECRET = "7ffc6cc0-6dff-11ec-b5e4-97162d942513"

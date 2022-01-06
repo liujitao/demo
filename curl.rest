@@ -1,36 +1,40 @@
 @host = 127.0.0.1
 @port = 8000
 @contentType = application/json
+@api_key = apiKey
 
 ### create user
 POST http://{{host}}:{{port}}/user HTTP/1.1
 Content-Type: {{contentType}}
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXIxMDYiLCJleHAiOjE2NDE0MzE2NDV9.SpOTMDrVcZGqYlP9hYHs8RjK8iQlg0jglbdsiI0hpQU
 
 {
-    "user_name": "user106",
-    "real_name": "user106",
-    "mobile": "13900000106",
-    "email": "user106@abc.com",
+    "user_name": "user107",
+    "real_name": "user107",
+    "mobile": "13900000107",
+    "email": "user107@abc.com",
     "password": "password"
 }
 
 ### retrive user
 GET http://{{host}}:{{port}}/user?search=user9&pageIndex=1&pageSize=20&sort[user_name]=-1 HTTP/1.1
-
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXIxMDYiLCJleHAiOjE2NDE0MzI0MDJ9.JaN6cFrRPP_ArNWKXgDtQgCcWE2DU9_iL-pINq-DHEA
 
 ### update user
-PUT http://{{host}}:{{port}}/user?_id=61d52a3b3ccd8fb453ada83c HTTP/1.1
+PUT http://{{host}}:{{port}}/user?_id=61d63f398b5dce4e6b2c3650 HTTP/1.1
 Content-Type: {{contentType}}
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXIxMDYiLCJleHAiOjE2NDE0MzE2NDV9.SpOTMDrVcZGqYlP9hYHs8RjK8iQlg0jglbdsiI0hpQU
 
 {
-    "user_name": "user996",
-    "real_name": "user996",
-    "mobile": "13900000996",
-    "email": "user996@abc.com"
+    "user_name": "user997",
+    "real_name": "user997",
+    "mobile": "13900000997",
+    "email": "user997@abc.com"
 }
 
 ### delete user
-DELETE http://{{host}}:{{port}}/user?_id=61cd47b338e4acbd43065c95&_id=61cd47b338e4acbd43065c94&_id=61cd47b338e4acbd43065c93&_id=61cd47b338e4acbd43065c92&_id=61d52a3b3ccd8fb453ada83c HTTP/1.1
+DELETE http://{{host}}:{{port}}/user?_id=61cd47b338e4acbd43065c95&_id=61cd47b338e4acbd43065c94&_id=61cd47b338e4acbd43065c93&_id=61cd47b338e4acbd43065c92&_id=61d63f398b5dce4e6b2c3650 HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXIxMDYiLCJleHAiOjE2NDE0MzE2NDV9.SpOTMDrVcZGqYlP9hYHs8RjK8iQlg0jglbdsiI0hpQU
 
 ### user change password
 POST http://{{host}}:{{port}}/user/change_password HTTP/1.1
@@ -44,6 +48,17 @@ Content-Type: {{contentType}}
 
 ### user login
 POST http://{{host}}:{{port}}/user/login HTTP/1.1
+Content-Type: {{contentType}}
+
+{
+    "user_name": "user106",
+    "password": "password"
+}
+
+### user refresh
+POST http://{{host}}:{{port}}/user/refresh HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXIxMDYiLCJleHAiOjE2NDE0MzE2NDV9.SpOTMDrVcZGqYlP9hYHs8RjK8iQlg0jglbdsiI0hpQU
 
 ### user logout
 POST http://{{host}}:{{port}}/user/logout HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXIxMDYiLCJleHAiOjE2NDE0MzE2NDV9.SpOTMDrVcZGqYlP9hYHs8RjK8iQlg0jglbdsiI0hpQU
