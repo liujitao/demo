@@ -1,7 +1,5 @@
 package common
 
-import "go.mongodb.org/mongo-driver/bson"
-
 // 定义配置文件
 type Configure struct {
     Mongo_host       string
@@ -23,9 +21,9 @@ type Configure struct {
 
 // 定义输出结果
 type List struct {
-    Total      int64    `json:"total"`      // 总记录数
-    Page_total int64    `json:"page_total"` // 总页数
-    Page_index int64    `json:"page_index"` // 当前页号
-    Page_size  int64    `json:"page_size"`  // 每页记录数
-    Rows       []bson.M `json:"rows"`       // 记录内容
+    Total      int64       `json:"total"`      // 总记录数
+    Page_total int64       `json:"page_total"` // 总页数
+    Page_index int64       `json:"page_index"` // 当前页号
+    Page_size  int64       `json:"page_size"`  // 每页记录数
+    Rows       interface{} `json:"rows"`       // 记录内容
 }

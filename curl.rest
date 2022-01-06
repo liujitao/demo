@@ -1,7 +1,6 @@
 @host = 127.0.0.1
 @port = 8000
 @contentType = application/json
-@api_key = apiKey
 
 ### create user
 POST http://{{host}}:{{port}}/user HTTP/1.1
@@ -17,19 +16,19 @@ Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXIxMDYi
 }
 
 ### retrive user
-GET http://{{host}}:{{port}}/user?search=user9&pageIndex=1&pageSize=20&sort[user_name]=-1 HTTP/1.1
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXIxMDYiLCJleHAiOjE2NDE0MzI0MDJ9.JaN6cFrRPP_ArNWKXgDtQgCcWE2DU9_iL-pINq-DHEA
+GET http://{{host}}:{{port}}/user?search=user&pageIndex=1&pageSize=20&sort[user_name]=-1 HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NDE1NDM0ODl9.D2H_QzxGXdlRedvpTpzshLHEcgb_goOtnKds1nDWSKU
 
 ### update user
-PUT http://{{host}}:{{port}}/user?_id=61d63f398b5dce4e6b2c3650 HTTP/1.1
+PUT http://{{host}}:{{port}}/user?_id=61d52f2d4460b77d940a49e6 HTTP/1.1
 Content-Type: {{contentType}}
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXIxMDYiLCJleHAiOjE2NDE0MzE2NDV9.SpOTMDrVcZGqYlP9hYHs8RjK8iQlg0jglbdsiI0hpQU
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NDE1NDM0ODl9.D2H_QzxGXdlRedvpTpzshLHEcgb_goOtnKds1nDWSKU
 
 {
-    "user_name": "user997",
-    "real_name": "user997",
-    "mobile": "13900000997",
-    "email": "user997@abc.com"
+    "user_name": "user102",
+    "real_name": "user102",
+    "mobile": "13900000102",
+    "email": "user102@abc.com"
 }
 
 ### delete user
@@ -51,14 +50,14 @@ POST http://{{host}}:{{port}}/user/login HTTP/1.1
 Content-Type: {{contentType}}
 
 {
-    "user_name": "user106",
+    "user_name": "user103",
     "password": "password"
 }
 
 ### user refresh
-POST http://{{host}}:{{port}}/user/refresh HTTP/1.1
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXIxMDYiLCJleHAiOjE2NDE0MzE2NDV9.SpOTMDrVcZGqYlP9hYHs8RjK8iQlg0jglbdsiI0hpQU
+GET http://{{host}}:{{port}}/user/refresh?_id=61d5135dacb99b1327d7940c HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NDE1NDU0NDF9.erJd4lq4WKApYZpRqFgkz-dAAMi5klKpg7Y4VzIDcLg
 
 ### user logout
-POST http://{{host}}:{{port}}/user/logout HTTP/1.1
+GET http://{{host}}:{{port}}/user/logout_id=61d52f2d4460b77d940a49e6 HTTP/1.1
 Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXIxMDYiLCJleHAiOjE2NDE0MzE2NDV9.SpOTMDrVcZGqYlP9hYHs8RjK8iQlg0jglbdsiI0hpQU

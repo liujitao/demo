@@ -87,9 +87,10 @@ func main() {
 
     // 不使用认证中间件
     {
+        router.POST("/user/register", userHandler.CreateUserHandler)
         router.POST("/user/login", userHandler.UserLoginHandler)
-        router.POST("/user/logout", userHandler.UserLogoutHandler)
-        router.POST("/user/refresh", userHandler.UserRefreshHandler)
+        router.GET("/user/logout", userHandler.UserLogoutHandler)
+        router.GET("/user/refresh", userHandler.UserRefreshHandler)
     }
 
     router.Run(Conf.App_host + ":" + Conf.App_port)

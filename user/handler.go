@@ -40,7 +40,7 @@ func MewUserHandler(ctx context.Context, collection *mongo.Collection, redisClie
 }
 
 /*
-建立用户
+用户注册 & 建立用户
 */
 func (handler *UserHandler) CreateUserHandler(c *gin.Context) {
     // 参数parameter
@@ -61,10 +61,6 @@ func (handler *UserHandler) CreateUserHandler(c *gin.Context) {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while inserting a new user"})
         return
     }
-
-    // 写入redis
-    data, _ := json.Marshal(user)
-    handler.redisClient.Set(handler.ctx, user.ID.Hex(), data, time.Hour)
 
     // 输出output
     c.JSON(http.StatusCreated, user)
@@ -138,8 +134,8 @@ func (handler *UserHandler) RetriveUserHandler(c *gin.Context) {
     }
     defer cursor.Close(handler.ctx)
 
-    var documents []bson.M
-    if err = cursor.All(handler.ctx, &documents); err != nil {
+    var users []UserModel
+    if err = cursor.All(handler.ctx, &users); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
@@ -150,7 +146,7 @@ func (handler *UserHandler) RetriveUserHandler(c *gin.Context) {
         Page_total: pageTotal,
         Page_index: pageIndex,
         Page_size:  pageSize,
-        Rows:       documents,
+        Rows:       users,
     }
     c.JSON(http.StatusOK, list)
 }
@@ -191,20 +187,15 @@ func (handler *UserHandler) UpdateUserHandler(c *gin.Context) {
         },
     }
 
-    var document bson.M
     result := handler.collection.FindOneAndUpdate(handler.ctx, filter, update, options)
     if result == nil {
         c.JSON(http.StatusBadRequest, gin.H{"message": result.Err().Error()})
         return
     }
-    result.Decode(&document)
-
-    // 写入redis
-    data, _ := json.Marshal(document)
-    handler.redisClient.Set(handler.ctx, id, data, time.Hour)
+    result.Decode(&user)
 
     // 输出output
-    c.JSON(http.StatusOK, document)
+    c.JSON(http.StatusOK, user)
 }
 
 /*
@@ -236,7 +227,7 @@ func (handler *UserHandler) DeleteUserHandler(c *gin.Context) {
         return
     }
 
-    // 写入redis
+    // 删除redis
     for _, id := range array {
         handler.redisClient.Del(handler.ctx, id)
     }
@@ -255,17 +246,16 @@ func (handler *UserHandler) UserChanegePasswordHandler(c *gin.Context) {
         return
     }
 
-    // 读取数据库
-    var document bson.M
+    // 查找数据库
+    var user UserModel
     filter := bson.M{"_id": userPassword.ID}
     if result := handler.collection.FindOne(handler.ctx, filter); result != nil {
-        result.Decode(&document)
+        result.Decode(&user)
     }
 
     // 校验密码
-    passwordHash := fmt.Sprintf("%v", document["password"])
-    if err := common.VerifyPassword(passwordHash, userPassword.OldPassword); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"message": "old password miss"})
+    if err := common.VerifyPassword(user.Password, userPassword.OldPassword); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"message": "user old password miss"})
         return
     }
 
@@ -282,14 +272,19 @@ func (handler *UserHandler) UserChanegePasswordHandler(c *gin.Context) {
         c.JSON(http.StatusBadRequest, gin.H{"message": result.Err().Error()})
         return
     }
-    result.Decode(&document)
 
-    // 写入redis
-    data, _ := json.Marshal(document)
-    handler.redisClient.Set(handler.ctx, userPassword.ID.Hex(), data, time.Hour)
+    // 更新redis
+    tokens, err := common.GenerateTokens(user.UserName)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    data, _ := json.Marshal(tokens)
+    handler.redisClient.Set(handler.ctx, user.ID.Hex(), data, time.Hour*24)
 
     // 输出output
-    c.JSON(http.StatusOK, gin.H{"message": "ok"})
+    c.JSON(http.StatusOK, gin.H{"message": "user password has changed"})
 }
 
 /*
@@ -301,21 +296,29 @@ func AuthMiddleWare() gin.HandlerFunc {
         tokenString := c.GetHeader("Authorization")
         if tokenString == "" {
             c.JSON(http.StatusUnauthorized, gin.H{"message": "Token not found"})
+            c.Abort()
             return
         }
 
         // 解析token
-        token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-            return []byte(JWT_SECRET), nil
+        token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+            if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+                return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+            }
+            return []byte(common.JWT_SECRET), nil
         })
 
         if err != nil {
             c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+            c.Abort()
             return
         }
 
-        if _, ok := token.Claims.(*CustomClaims); !ok && !token.Valid {
-            c.JSON(http.StatusUnauthorized, gin.H{"message": "Ivaild token"})
+        //claims, ok := token.Claims.(jwt.MapClaims)
+        _, ok := token.Claims.(jwt.MapClaims)
+        if !ok && !token.Valid {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+            c.Abort()
             return
         }
 
@@ -328,46 +331,40 @@ func AuthMiddleWare() gin.HandlerFunc {
 */
 func (handler *UserHandler) UserLoginHandler(c *gin.Context) {
     // 参数parameter
-    var user UserLoginModel
-    if err := c.ShouldBindJSON(&user); err != nil {
+    var userLogin UserLoginModel
+    if err := c.ShouldBindJSON(&userLogin); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
 
     // mongo
-    var document bson.M
-    result := handler.collection.FindOne(handler.ctx, bson.M{"user_name": user.UserName})
+    var user UserModel
+    result := handler.collection.FindOne(handler.ctx, bson.M{"user_name": userLogin.UserName})
     if result == nil {
         c.JSON(http.StatusBadRequest, gin.H{"message": result.Err().Error()})
         return
     }
-    result.Decode(&document)
+    result.Decode(&user)
 
     // 校验用户密码
-    passwordHash := fmt.Sprintf("%v", document["password"])
-    if err := common.VerifyPassword(passwordHash, user.Password); err != nil {
+    if err := common.VerifyPassword(user.Password, userLogin.Password); err != nil {
         c.JSON(http.StatusUnauthorized, gin.H{"message": "invaild password"})
         return
     }
 
-    // 生成JWT token
-    expirationTime := time.Now().Add(time.Minute * 15)
-    claims := &CustomClaims{
-        user.UserName,
-        jwt.StandardClaims{
-            ExpiresAt: expirationTime.Unix(),
-        },
-    }
-
-    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-    tokenString, err := token.SignedString([]byte(JWT_SECRET))
+    // 生成token
+    tokens, err := common.GenerateTokens(user.ID.Hex())
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
     }
 
+    // 写入redis
+    data, _ := json.Marshal(tokens)
+    handler.redisClient.Set(handler.ctx, user.ID.Hex(), data, time.Hour*24)
+
     // 输出output
-    c.JSON(http.StatusOK, gin.H{"token": tokenString, "expires": expirationTime})
+    c.JSON(http.StatusOK, tokens)
 }
 
 /*
@@ -375,46 +372,50 @@ func (handler *UserHandler) UserLoginHandler(c *gin.Context) {
 */
 func (handler *UserHandler) UserRefreshHandler(c *gin.Context) {
     // 参数
-    tokenString := c.GetHeader("Authorization")
-    if tokenString == "" {
+    userId := c.Query("_id")
+
+    refreshString := c.GetHeader("Authorization")
+    if refreshString == "" {
         c.JSON(http.StatusUnauthorized, gin.H{"message": "Token not found"})
         return
     }
 
     // 解析token
-    token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-        return []byte(JWT_SECRET), nil
+    refreshToken, err := jwt.Parse(refreshString, func(token *jwt.Token) (interface{}, error) {
+        if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+            return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+        }
+        return []byte(common.JWT_SECRET), nil
     })
 
     if err != nil {
         c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+        c.Abort()
         return
     }
 
-    claims, ok := token.Claims.(*CustomClaims)
-    if !ok && !token.Valid {
-        c.JSON(http.StatusUnauthorized, gin.H{"message": "Ivaild token"})
+    //claims, ok := refreshToken.Claims.(jwt.MapClaims)
+    _, ok := refreshToken.Claims.(jwt.MapClaims)
+    if !ok && !refreshToken.Valid {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+        c.Abort()
         return
     }
 
-    // 判断过期
-    if time.Unix(claims.ExpiresAt, 0).Sub(time.Now()) > time.Second*30 {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Token is not expired yet"})
-        return
-    }
-    // 重新生成JWT token
-    expirationTime := time.Now().Add(time.Minute * 15)
+    // accessToken 过期30秒后才可刷新
 
-    claims.ExpiresAt = expirationTime.Unix()
-    newToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-    newTokenString, err := newToken.SignedString([]byte(JWT_SECRET))
+    // 更新redis
+    tokens, err := common.GenerateTokens(userId)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
     }
 
+    data, _ := json.Marshal(tokens)
+    handler.redisClient.Set(handler.ctx, userId, data, time.Hour*24)
+
     // 输出output
-    c.JSON(http.StatusOK, gin.H{"token": newTokenString, "expires": expirationTime})
+    c.JSON(http.StatusOK, tokens)
 }
 
 /*
