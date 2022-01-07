@@ -74,7 +74,7 @@ func main() {
 
     // 使用认证中间件
     authorized := router.Group("/")
-    authorized.Use(user.AuthMiddleWare())
+    authorized.Use(userHandler.AuthMiddleWare())
     {
         // 用户
         authorized.POST("/user", userHandler.CreateUserHandler)
@@ -82,14 +82,16 @@ func main() {
         authorized.PUT("/user", userHandler.UpdateUserHandler)
         authorized.DELETE("/user", userHandler.DeleteUserHandler)
         authorized.POST("/user/change_password", userHandler.UserChanegePasswordHandler)
-
+        authorized.GET("/user/logout", userHandler.UserLogoutHandler)
+        authorized.GET("/user/blacklist", userHandler.UserBlackListHandler)
+        authorized.POST("/user/blacklist", userHandler.UserBlackListAddHandler)
+        authorized.DELETE("/user/blacklist", userHandler.UserBlackListRemoveHandler)
     }
 
     // 不使用认证中间件
     {
         router.POST("/user/register", userHandler.CreateUserHandler)
         router.POST("/user/login", userHandler.UserLoginHandler)
-        router.GET("/user/logout", userHandler.UserLogoutHandler)
         router.GET("/user/refresh", userHandler.UserRefreshHandler)
     }
 

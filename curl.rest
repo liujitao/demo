@@ -5,24 +5,24 @@
 ### create user
 POST http://{{host}}:{{port}}/user HTTP/1.1
 Content-Type: {{contentType}}
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXIxMDYiLCJleHAiOjE2NDE0MzE2NDV9.SpOTMDrVcZGqYlP9hYHs8RjK8iQlg0jglbdsiI0hpQU
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwiZXhwIjoxNjQxNTQyMDE1LCJ1c2VyX2lkIjoiNjFjZDQ3YjMzOGU0YWNiZDQzMDY1YzExIn0.htTdkNfaiOCaH9fq0P7-gI3198jyD-S6TzUuIw9L8cU
 
 {
-    "user_name": "user107",
-    "real_name": "user107",
-    "mobile": "13900000107",
-    "email": "user107@abc.com",
+    "user_name": "user104",
+    "real_name": "user104",
+    "mobile": "13900000104",
+    "email": "user104@abc.com",
     "password": "password"
 }
 
 ### retrive user
-GET http://{{host}}:{{port}}/user?search=user&pageIndex=1&pageSize=20&sort[user_name]=-1 HTTP/1.1
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NDE1NDM0ODl9.D2H_QzxGXdlRedvpTpzshLHEcgb_goOtnKds1nDWSKU
+GET http://{{host}}:{{port}}/user?search=user10&pageIndex=1&pageSize=20&sort[user_name]=-1 HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwiZXhwIjoxNjQxNTQ0NDQ3LCJ1c2VyX2lkIjoiNjFjZDQ3YjMzOGU0YWNiZDQzMDY1YzEwIn0.44RbYHIoz22KhJggHt8N-ilyMLxCCBrovK6qdyNOL18
 
 ### update user
 PUT http://{{host}}:{{port}}/user?_id=61d52f2d4460b77d940a49e6 HTTP/1.1
 Content-Type: {{contentType}}
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NDE1NDM0ODl9.D2H_QzxGXdlRedvpTpzshLHEcgb_goOtnKds1nDWSKU
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwiZXhwIjoxNjQxNTQyMDE1LCJ1c2VyX2lkIjoiNjFjZDQ3YjMzOGU0YWNiZDQzMDY1YzExIn0.htTdkNfaiOCaH9fq0P7-gI3198jyD-S6TzUuIw9L8cU
 
 {
     "user_name": "user102",
@@ -32,8 +32,8 @@ Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NDE1NDM0ODl9.D2H
 }
 
 ### delete user
-DELETE http://{{host}}:{{port}}/user?_id=61cd47b338e4acbd43065c95&_id=61cd47b338e4acbd43065c94&_id=61cd47b338e4acbd43065c93&_id=61cd47b338e4acbd43065c92&_id=61d63f398b5dce4e6b2c3650 HTTP/1.1
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXIxMDYiLCJleHAiOjE2NDE0MzE2NDV9.SpOTMDrVcZGqYlP9hYHs8RjK8iQlg0jglbdsiI0hpQU
+DELETE http://{{host}}:{{port}}/user?_id=61cd47b338e4acbd43065c95&_id=61d7f140ff161e2edf9fda9d HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwiZXhwIjoxNjQxNTQyMjc4LCJ1c2VyX2lkIjoiNjFkN2YxNDBmZjE2MWUyZWRmOWZkYTlkIn0.OICYIIcsyd-Divt2hXfBMQQfmit-C6HI4bGzVqMuN44
 
 ### user change password
 POST http://{{host}}:{{port}}/user/change_password HTTP/1.1
@@ -50,14 +50,26 @@ POST http://{{host}}:{{port}}/user/login HTTP/1.1
 Content-Type: {{contentType}}
 
 {
-    "user_name": "user103",
+    "user_name": "user10",
     "password": "password"
 }
 
 ### user refresh
-GET http://{{host}}:{{port}}/user/refresh?_id=61d5135dacb99b1327d7940c HTTP/1.1
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NDE1NDU0NDF9.erJd4lq4WKApYZpRqFgkz-dAAMi5klKpg7Y4VzIDcLg
+GET http://{{host}}:{{port}}/user/refresh?_id=61cd47b338e4acbd43065c10 HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NDIxNTE5ODd9.DafEzucqY6WgJ2gzPJyllXWA7tMmEGf4RfyfCiHqQLM
 
 ### user logout
-GET http://{{host}}:{{port}}/user/logout_id=61d52f2d4460b77d940a49e6 HTTP/1.1
+GET http://{{host}}:{{port}}/user/logout?_id=61cd47b338e4acbd43065c10 HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwiZXhwIjoxNjQxNTQzMDExLCJ1c2VyX2lkIjoiNjFjZDQ3YjMzOGU0YWNiZDQzMDY1YzEwIn0.YFKhs9gXtphqbtiY4Uava6PPbBkoZCcnyUqEMec-ez0
+
+### user blacklist 
+GET http://{{host}}:{{port}}/user/blacklist HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXIxMDYiLCJleHAiOjE2NDE0MzE2NDV9.SpOTMDrVcZGqYlP9hYHs8RjK8iQlg0jglbdsiI0hpQU
+
+### user blacklist add
+POST http://{{host}}:{{port}}/user/blacklist?_id=61d52f2d4460b77d940a49e6 HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXIxMDYiLCJleHAiOjE2NDE0MzE2NDV9.SpOTMDrVcZGqYlP9hYHs8RjK8iQlg0jglbdsiI0hpQU
+
+### user blacklist remove
+DELETE http://{{host}}:{{port}}/user/blacklist?_id=61cd47b338e4acbd43065c95&_id=61cd47b338e4acbd43065c94&_id=61cd47b338e4acbd43065c93&_id=61cd47b338e4acbd43065c92&_id=61d63f398b5dce4e6b2c3650 HTTP/1.1
 Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXIxMDYiLCJleHAiOjE2NDE0MzE2NDV9.SpOTMDrVcZGqYlP9hYHs8RjK8iQlg0jglbdsiI0hpQU

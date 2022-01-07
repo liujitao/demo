@@ -209,14 +209,21 @@ func (handler *UserHandler) DeleteUserHandler(c *gin.Context) {
         return
     }
 
+    // 禁止删除当前登录用户
+    currentUser := GetAccessTokenID(c.GetHeader("Authorization"))
     var _id []interface{}
     for _, id := range array {
-        i, err := primitive.ObjectIDFromHex(id)
+        if id == currentUser {
+            c.JSON(http.StatusBadRequest, gin.H{"message": "disable delete login user"})
+            return
+        }
+
+        tmp, err := primitive.ObjectIDFromHex(id)
         if err != nil {
             c.JSON(http.StatusBadRequest, err.Error())
             return
         }
-        _id = append(_id, i)
+        _id = append(_id, tmp)
     }
 
     // 写入mongo
@@ -228,8 +235,8 @@ func (handler *UserHandler) DeleteUserHandler(c *gin.Context) {
     }
 
     // 删除redis
-    for _, id := range array {
-        handler.redisClient.Del(handler.ctx, id)
+    for _, _id := range array {
+        handler.redisClient.Del(handler.ctx, _id)
     }
 
     // 输出output
@@ -273,57 +280,20 @@ func (handler *UserHandler) UserChanegePasswordHandler(c *gin.Context) {
         return
     }
 
-    // 更新redis
-    tokens, err := common.GenerateTokens(user.UserName)
+    // 生成token
+    _id := user.ID.Hex()
+    token, err := GenerateTokens(_id)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
     }
 
-    data, _ := json.Marshal(tokens)
-    handler.redisClient.Set(handler.ctx, user.ID.Hex(), data, time.Hour*24)
+    // 写入redis
+    data, _ := json.Marshal(token)
+    handler.redisClient.Set(handler.ctx, _id, data, time.Hour*24*7)
 
     // 输出output
-    c.JSON(http.StatusOK, gin.H{"message": "user password has changed"})
-}
-
-/*
-认证中间件
-*/
-func AuthMiddleWare() gin.HandlerFunc {
-    return func(c *gin.Context) {
-        // 参数
-        tokenString := c.GetHeader("Authorization")
-        if tokenString == "" {
-            c.JSON(http.StatusUnauthorized, gin.H{"message": "Token not found"})
-            c.Abort()
-            return
-        }
-
-        // 解析token
-        token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-            if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-                return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-            }
-            return []byte(common.JWT_SECRET), nil
-        })
-
-        if err != nil {
-            c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-            c.Abort()
-            return
-        }
-
-        //claims, ok := token.Claims.(jwt.MapClaims)
-        _, ok := token.Claims.(jwt.MapClaims)
-        if !ok && !token.Valid {
-            c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-            c.Abort()
-            return
-        }
-
-        c.Next()
-    }
+    c.JSON(http.StatusOK, token)
 }
 
 /*
@@ -353,18 +323,33 @@ func (handler *UserHandler) UserLoginHandler(c *gin.Context) {
     }
 
     // 生成token
-    tokens, err := common.GenerateTokens(user.ID.Hex())
+    _id := user.ID.Hex()
+    token, err := GenerateTokens(_id)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
     }
 
     // 写入redis
-    data, _ := json.Marshal(tokens)
-    handler.redisClient.Set(handler.ctx, user.ID.Hex(), data, time.Hour*24)
+    data, _ := json.Marshal(token)
+    handler.redisClient.Set(handler.ctx, _id, data, time.Hour*24*7)
 
     // 输出output
-    c.JSON(http.StatusOK, tokens)
+    c.JSON(http.StatusOK, token)
+}
+
+/*
+用户退出
+*/
+func (handler *UserHandler) UserLogoutHandler(c *gin.Context) {
+    // 参数
+    userId := c.Query("_id")
+
+    // redis
+    handler.redisClient.Del(handler.ctx, userId)
+
+    // 输出output
+    c.JSON(http.StatusOK, gin.H{"message": "user has been logout"})
 }
 
 /*
@@ -372,7 +357,7 @@ func (handler *UserHandler) UserLoginHandler(c *gin.Context) {
 */
 func (handler *UserHandler) UserRefreshHandler(c *gin.Context) {
     // 参数
-    userId := c.Query("_id")
+    _id := c.Query("_id")
 
     refreshString := c.GetHeader("Authorization")
     if refreshString == "" {
@@ -385,12 +370,11 @@ func (handler *UserHandler) UserRefreshHandler(c *gin.Context) {
         if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
             return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
         }
-        return []byte(common.JWT_SECRET), nil
+        return []byte(JWT_SECRET), nil
     })
 
     if err != nil {
         c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-        c.Abort()
         return
     }
 
@@ -398,28 +382,45 @@ func (handler *UserHandler) UserRefreshHandler(c *gin.Context) {
     _, ok := refreshToken.Claims.(jwt.MapClaims)
     if !ok && !refreshToken.Valid {
         c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-        c.Abort()
         return
     }
 
     // accessToken 过期30秒后才可刷新
+    var accessToken Token
+    if val, err := handler.redisClient.Get(handler.ctx, _id).Result(); err != redis.Nil {
+        _ = json.Unmarshal([]byte(val), &accessToken)
+        if time.Now().Sub(time.Unix(accessToken.AccessTokenExp, 0)).Seconds() < float64(30) {
+            c.JSON(http.StatusUnauthorized, gin.H{"message": "access token has not expired"})
+            return
+        }
+    }
 
-    // 更新redis
-    tokens, err := common.GenerateTokens(userId)
+    // 生成token
+    token, err := GenerateTokens(_id)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
     }
 
-    data, _ := json.Marshal(tokens)
-    handler.redisClient.Set(handler.ctx, userId, data, time.Hour*24)
-
+    // 写入redis
+    data, _ := json.Marshal(token)
+    handler.redisClient.Set(handler.ctx, _id, data, time.Hour*24*7)
     // 输出output
-    c.JSON(http.StatusOK, tokens)
+    c.JSON(http.StatusOK, token)
 }
 
 /*
-用户退出
+用户黑名单
 */
-func (handler *UserHandler) UserLogoutHandler(c *gin.Context) {
+func (handler *UserHandler) UserBlackListHandler(c *gin.Context) {
+    return
+}
+
+func (handler *UserHandler) UserBlackListAddHandler(c *gin.Context) {
+    return
+    // 禁止加入当前登录用户
+}
+
+func (handler *UserHandler) UserBlackListRemoveHandler(c *gin.Context) {
+    return
 }
