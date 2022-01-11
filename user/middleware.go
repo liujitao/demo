@@ -5,24 +5,16 @@ import (
     "net/http"
     "time"
 
-    "github.com/dgrijalva/jwt-go"
     "github.com/gin-gonic/gin"
-    "github.com/go-redis/redis/v8"
+    "github.com/golang-jwt/jwt"
 )
 
 const JWT_SECRET = "7ffc6cc0-6dff-11ec-b5e4-97162d942513"
 
-type Token struct {
-    AccessToken     string `json:"access_token"`
-    RefreshToken    string `json:"refresh_token"`
-    AccessTokenExp  int64  `json:"access_token_exp"`
-    RefreshTokenExp int64  `json:"refresh_token_exp"`
-}
-
 /*
 生成token
 */
-func GenerateTokens(userID string) (interface{}, error) {
+func GenerateTokens(userID string) (map[string]string, error) {
     accessExp := time.Now().Add(time.Minute * 5).Unix()
     refreshExp := time.Now().Add(time.Hour * 24 * 7).Unix()
 
@@ -30,8 +22,8 @@ func GenerateTokens(userID string) (interface{}, error) {
     accessToken := jwt.New(jwt.SigningMethodHS256)
     accessClaims := accessToken.Claims.(jwt.MapClaims)
     accessClaims["user_id"] = userID
+    accessClaims["access_exp"] = accessExp
     accessClaims["admin"] = true
-    accessClaims["exp"] = accessExp
 
     accessString, err := accessToken.SignedString([]byte(JWT_SECRET))
     if err != nil {
@@ -41,7 +33,9 @@ func GenerateTokens(userID string) (interface{}, error) {
     // refresh token
     refreshToken := jwt.New(jwt.SigningMethodHS256)
     refreshClaims := refreshToken.Claims.(jwt.MapClaims)
-    refreshClaims["exp"] = refreshExp
+    refreshClaims["user_id"] = userID
+    refreshClaims["access_exp"] = accessExp
+    refreshClaims["refresh_exp"] = refreshExp
 
     refreshString, err := refreshToken.SignedString([]byte(JWT_SECRET))
     if err != nil {
@@ -49,26 +43,29 @@ func GenerateTokens(userID string) (interface{}, error) {
     }
 
     // return result
-    token := Token{
-        AccessToken:     accessString,
-        RefreshToken:    refreshString,
-        AccessTokenExp:  accessExp,
-        RefreshTokenExp: refreshExp,
-    }
+    token := map[string]string{"access_token": accessString, "refresh_token": refreshString}
     return token, nil
 }
 
 /*
-获取token ID
+检查token
 */
-func GetAccessTokenID(tokenString string) interface{} {
-    token, _ := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+func VerifyToken(tokenString string) (jwt.MapClaims, bool) {
+    token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+        if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+            return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+        }
         return []byte(JWT_SECRET), nil
     })
+    if err != nil {
+        return nil, false
+    }
 
-    claims, _ := token.Claims.(jwt.MapClaims)
-
-    return claims["user_id"]
+    claims, ok := token.Claims.(jwt.MapClaims)
+    if !ok && !token.Valid {
+        return claims, false
+    }
+    return claims, true
 }
 
 /*
@@ -81,36 +78,27 @@ func (handler *UserHandler) AuthMiddleWare() gin.HandlerFunc {
         if tokenString == "" {
             c.JSON(http.StatusUnauthorized, gin.H{"message": "Token has not found"})
             c.Abort()
-            return
         }
 
-        // 读redis (black list)
-        if _, err := handler.redisClient.Get(handler.ctx, tokenString).Result(); err != redis.Nil {
-            c.JSON(http.StatusUnauthorized, gin.H{"message": "Token has been in black list"})
+        // 检查token有效性
+        claims, ok := VerifyToken(tokenString)
+        if !ok {
+            c.JSON(http.StatusUnauthorized, gin.H{"message": "token has invaild"})
             c.Abort()
-            return
+        }
+        _id := fmt.Sprintf("%v", claims["user_id"])
+
+        // 检查token白名单
+        keys, _, err := handler.redisClient.Scan(handler.ctx, 0, _id+"*", 2).Result()
+        if (err != nil) || (len(keys) == 0) {
+            c.JSON(http.StatusUnauthorized, gin.H{"message": "token has invaild"})
+            c.Abort()
         }
 
-        // 解析token
-        token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-            if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-                return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-            }
-            return []byte(JWT_SECRET), nil
-        })
-
-        if err != nil {
-            c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+        // 检查用户黑名单
+        if handler.redisClient.SIsMember(handler.ctx, "userblacklist", _id).Val() {
+            c.JSON(http.StatusUnauthorized, gin.H{"message": "user has been in black list"})
             c.Abort()
-            return
-        }
-
-        //claims, ok := token.Claims.(jwt.MapClaims)
-        _, ok := token.Claims.(jwt.MapClaims)
-        if !ok && !token.Valid {
-            c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-            c.Abort()
-            return
         }
 
         c.Next()

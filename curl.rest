@@ -16,8 +16,8 @@ Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwiZXhwIjox
 }
 
 ### retrive user
-GET http://{{host}}:{{port}}/user?search=user10&pageIndex=1&pageSize=20&sort[user_name]=-1 HTTP/1.1
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwiZXhwIjoxNjQxNTQ0NDQ3LCJ1c2VyX2lkIjoiNjFjZDQ3YjMzOGU0YWNiZDQzMDY1YzEwIn0.44RbYHIoz22KhJggHt8N-ilyMLxCCBrovK6qdyNOL18
+GET http://{{host}}:{{port}}/user?search=user2&pageIndex=1&pageSize=20&sort[user_name]=-1 HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwiZXhwIjoxNjQxODY4ODk2LCJ1c2VyX2lkIjoiNjFjZDQ3YjMzOGU0YWNiZDQzMDY1YzEwIn0.OdMopuoZQrOk4Fo300fTsU4f3x6mmoN4bl-R_PDmu8g
 
 ### update user
 PUT http://{{host}}:{{port}}/user?_id=61d52f2d4460b77d940a49e6 HTTP/1.1
@@ -50,26 +50,26 @@ POST http://{{host}}:{{port}}/user/login HTTP/1.1
 Content-Type: {{contentType}}
 
 {
-    "user_name": "user10",
+    "user_name": "user11",
     "password": "password"
 }
 
 ### user refresh
-GET http://{{host}}:{{port}}/user/refresh?_id=61cd47b338e4acbd43065c10 HTTP/1.1
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NDIxNTE5ODd9.DafEzucqY6WgJ2gzPJyllXWA7tMmEGf4RfyfCiHqQLM
+GET http://{{host}}:{{port}}/user/refresh HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQxODg3MjYxLCJyZWZyZXNoX2V4cCI6MTY0MjQ5MTc2MSwidXNlcl9pZCI6IjYxY2Q0N2IzMzhlNGFjYmQ0MzA2NWMxMSJ9.W_La-15ZPMWkxOsiXUUgLG4yI-epAxSn3y3Jdn6xph0
 
 ### user logout
-GET http://{{host}}:{{port}}/user/logout?_id=61cd47b338e4acbd43065c10 HTTP/1.1
+GET http://{{host}}:{{port}}/user/logout HTTP/1.1
 Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwiZXhwIjoxNjQxNTQzMDExLCJ1c2VyX2lkIjoiNjFjZDQ3YjMzOGU0YWNiZDQzMDY1YzEwIn0.YFKhs9gXtphqbtiY4Uava6PPbBkoZCcnyUqEMec-ez0
 
 ### user blacklist 
 GET http://{{host}}:{{port}}/user/blacklist HTTP/1.1
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXIxMDYiLCJleHAiOjE2NDE0MzE2NDV9.SpOTMDrVcZGqYlP9hYHs8RjK8iQlg0jglbdsiI0hpQU
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQxODg1NDk5LCJhZG1pbiI6dHJ1ZSwidXNlcl9pZCI6IjYxY2Q0N2IzMzhlNGFjYmQ0MzA2NWMxMSJ9.GXv9ocLIxFbftaOzLq92TP6MzIP_gnO0fhRNQAj70K4
 
 ### user blacklist add
-POST http://{{host}}:{{port}}/user/blacklist?_id=61d52f2d4460b77d940a49e6 HTTP/1.1
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXIxMDYiLCJleHAiOjE2NDE0MzE2NDV9.SpOTMDrVcZGqYlP9hYHs8RjK8iQlg0jglbdsiI0hpQU
+POST http://{{host}}:{{port}}/user/blacklist?_id=61d52f2d4460b77d940a49e6&_id=61cd47b338e4acbd43065c10&_id=61cd47b338e4acbd43065c29 HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQxODg1NDk5LCJhZG1pbiI6dHJ1ZSwidXNlcl9pZCI6IjYxY2Q0N2IzMzhlNGFjYmQ0MzA2NWMxMSJ9.GXv9ocLIxFbftaOzLq92TP6MzIP_gnO0fhRNQAj70K4
 
 ### user blacklist remove
-DELETE http://{{host}}:{{port}}/user/blacklist?_id=61cd47b338e4acbd43065c95&_id=61cd47b338e4acbd43065c94&_id=61cd47b338e4acbd43065c93&_id=61cd47b338e4acbd43065c92&_id=61d63f398b5dce4e6b2c3650 HTTP/1.1
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXIxMDYiLCJleHAiOjE2NDE0MzE2NDV9.SpOTMDrVcZGqYlP9hYHs8RjK8iQlg0jglbdsiI0hpQU
+DELETE http://{{host}}:{{port}}/user/blacklist?_id=61cd47b338e4acbd43065c29&_id=61d52f2d4460b77d940a49e6 HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwiZXhwIjoxNjQxODY2MDA0LCJ1c2VyX2lkIjoiNjFjZDQ3YjMzOGU0YWNiZDQzMDY1YzEwIn0._imHUvmmGWN6crEGNhjLMdrWIrxcK3AQnAmOTBhS2F0

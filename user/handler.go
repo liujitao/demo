@@ -3,14 +3,12 @@ package user
 import (
     "context"
     "demo/common"
-    "encoding/json"
     "fmt"
     "math"
     "net/http"
     "strconv"
     "time"
 
-    "github.com/dgrijalva/jwt-go"
     "github.com/gin-gonic/gin"
     "github.com/go-redis/redis/v8"
     "go.mongodb.org/mongo-driver/bson"
@@ -203,28 +201,13 @@ func (handler *UserHandler) UpdateUserHandler(c *gin.Context) {
 */
 func (handler *UserHandler) DeleteUserHandler(c *gin.Context) {
     // 参数paramater
-    array := c.QueryArray("_id")
-    if len(array) == 0 {
+    _id := c.QueryArray("_id")
+    if len(_id) == 0 {
         c.JSON(http.StatusBadRequest, gin.H{"message": "_id is null"})
         return
     }
 
     // 禁止删除当前登录用户
-    currentUser := GetAccessTokenID(c.GetHeader("Authorization"))
-    var _id []interface{}
-    for _, id := range array {
-        if id == currentUser {
-            c.JSON(http.StatusBadRequest, gin.H{"message": "disable delete login user"})
-            return
-        }
-
-        tmp, err := primitive.ObjectIDFromHex(id)
-        if err != nil {
-            c.JSON(http.StatusBadRequest, err.Error())
-            return
-        }
-        _id = append(_id, tmp)
-    }
 
     // 写入mongo
     filter := bson.M{"_id": bson.M{"$in": _id}}
@@ -234,10 +217,7 @@ func (handler *UserHandler) DeleteUserHandler(c *gin.Context) {
         return
     }
 
-    // 删除redis
-    for _, _id := range array {
-        handler.redisClient.Del(handler.ctx, _id)
-    }
+    // 写入redis token  删除access_token refresh_token
 
     // 输出output
     c.JSON(http.StatusOK, result)
@@ -282,18 +262,23 @@ func (handler *UserHandler) UserChanegePasswordHandler(c *gin.Context) {
 
     // 生成token
     _id := user.ID.Hex()
-    token, err := GenerateTokens(_id)
+    tokens, err := GenerateTokens(_id)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
     }
 
-    // 写入redis
-    data, _ := json.Marshal(token)
-    handler.redisClient.Set(handler.ctx, _id, data, time.Hour*24*7)
+    // redis处理 (删除旧token，增加新token)
+    keys, _, err := handler.redisClient.Scan(handler.ctx, 0, _id+"*", 2).Result()
+    for _, key := range keys {
+        handler.redisClient.Del(handler.ctx, key)
+    }
+
+    handler.redisClient.Set(handler.ctx, _id+"_"+tokens["access_token"], _id, time.Minute*5)
+    handler.redisClient.Set(handler.ctx, _id+"_"+tokens["refresh_token"], _id, time.Hour*24*7)
 
     // 输出output
-    c.JSON(http.StatusOK, token)
+    c.JSON(http.StatusOK, tokens)
 }
 
 /*
@@ -307,7 +292,7 @@ func (handler *UserHandler) UserLoginHandler(c *gin.Context) {
         return
     }
 
-    // mongo
+    // mongo （校验密码和锁定）
     var user UserModel
     result := handler.collection.FindOne(handler.ctx, bson.M{"user_name": userLogin.UserName})
     if result == nil {
@@ -322,20 +307,27 @@ func (handler *UserHandler) UserLoginHandler(c *gin.Context) {
         return
     }
 
-    // 生成token
     _id := user.ID.Hex()
-    token, err := GenerateTokens(_id)
+
+    // 检查用户黑名单
+    if handler.redisClient.SIsMember(handler.ctx, "userblacklist", _id).Val() {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "user has been in black list"})
+        return
+    }
+
+    // 生成token
+    tokens, err := GenerateTokens(_id)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
     }
 
-    // 写入redis
-    data, _ := json.Marshal(token)
-    handler.redisClient.Set(handler.ctx, _id, data, time.Hour*24*7)
+    // redis处理 (增加新token)
+    handler.redisClient.Set(handler.ctx, _id+"_"+tokens["access_token"], _id, time.Minute*5)
+    handler.redisClient.Set(handler.ctx, _id+"_"+tokens["refresh_token"], _id, time.Hour*24*7)
 
     // 输出output
-    c.JSON(http.StatusOK, token)
+    c.JSON(http.StatusOK, tokens)
 }
 
 /*
@@ -343,10 +335,29 @@ func (handler *UserHandler) UserLoginHandler(c *gin.Context) {
 */
 func (handler *UserHandler) UserLogoutHandler(c *gin.Context) {
     // 参数
-    userId := c.Query("_id")
+    TokenString := c.GetHeader("Authorization")
+    if TokenString == "" {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "Token not found"})
+        return
+    }
 
-    // redis
-    handler.redisClient.Del(handler.ctx, userId)
+    // 检查token有效性
+    claims, ok := VerifyToken(TokenString)
+    if !ok {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "token has invaild"})
+        return
+    }
+    _id := fmt.Sprintf("%v", claims["user_id"])
+
+    // 检查token白名单
+    keys, _, err := handler.redisClient.Scan(handler.ctx, 0, _id+"*", 2).Result()
+    if (err != nil) || (len(keys) == 0) {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "token has invaild"})
+        return
+    }
+
+    // redis处理(删除旧access token)
+    handler.redisClient.Del(handler.ctx, _id+"_"+TokenString)
 
     // 输出output
     c.JSON(http.StatusOK, gin.H{"message": "user has been logout"})
@@ -357,70 +368,113 @@ func (handler *UserHandler) UserLogoutHandler(c *gin.Context) {
 */
 func (handler *UserHandler) UserRefreshHandler(c *gin.Context) {
     // 参数
-    _id := c.Query("_id")
-
-    refreshString := c.GetHeader("Authorization")
-    if refreshString == "" {
+    refreshTokenString := c.GetHeader("Authorization")
+    if refreshTokenString == "" {
         c.JSON(http.StatusUnauthorized, gin.H{"message": "Token not found"})
         return
     }
 
-    // 解析token
-    refreshToken, err := jwt.Parse(refreshString, func(token *jwt.Token) (interface{}, error) {
-        if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-            return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-        }
-        return []byte(JWT_SECRET), nil
-    })
+    // 检查token有效性
+    claims, ok := VerifyToken(refreshTokenString)
+    if !ok {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "token has invaild"})
+        return
+    }
+    _id := fmt.Sprintf("%v", claims["user_id"])
+    access_exp := int64(claims["access_exp"].(float64))
 
-    if err != nil {
-        c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+    // 检查token白名单
+    keys, _, err := handler.redisClient.Scan(handler.ctx, 0, _id+"*", 2).Result()
+    if (err != nil) || (len(keys) == 0) {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "token has invaild"})
         return
     }
 
-    //claims, ok := refreshToken.Claims.(jwt.MapClaims)
-    _, ok := refreshToken.Claims.(jwt.MapClaims)
-    if !ok && !refreshToken.Valid {
-        c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+    // 检查用户黑名单
+    if handler.redisClient.SIsMember(handler.ctx, "userblacklist", _id).Val() {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "user has been in black list"})
         return
     }
 
-    // accessToken 过期30秒后才可刷新
-    var accessToken Token
-    if val, err := handler.redisClient.Get(handler.ctx, _id).Result(); err != redis.Nil {
-        _ = json.Unmarshal([]byte(val), &accessToken)
-        if time.Now().Sub(time.Unix(accessToken.AccessTokenExp, 0)).Seconds() < float64(30) {
-            c.JSON(http.StatusUnauthorized, gin.H{"message": "access token has not expired"})
-            return
-        }
+    // 检查刷新时间(accessToken必须过期30秒)
+    if time.Now().Sub(time.Unix(access_exp, 0)).Seconds() < 30 {
+        c.JSON(http.StatusOK, gin.H{"message": "token has been not expired"})
+        return
     }
 
     // 生成token
-    token, err := GenerateTokens(_id)
+    tokens, err := GenerateTokens(_id)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
     }
 
-    // 写入redis
-    data, _ := json.Marshal(token)
-    handler.redisClient.Set(handler.ctx, _id, data, time.Hour*24*7)
+    // redis处理(删除旧refresh token，增加新token)
+    handler.redisClient.Del(handler.ctx, _id+"_"+refreshTokenString)
+    handler.redisClient.Set(handler.ctx, _id+"_"+tokens["access_token"], _id, time.Minute*5)
+    handler.redisClient.Set(handler.ctx, _id+"_"+tokens["refresh_token"], _id, time.Hour*24*7)
+
     // 输出output
-    c.JSON(http.StatusOK, token)
+    c.JSON(http.StatusOK, tokens)
 }
 
 /*
 用户黑名单
 */
 func (handler *UserHandler) UserBlackListHandler(c *gin.Context) {
-    return
+    // redis
+    result, err := handler.redisClient.SMembers(handler.ctx, "userblacklist").Result()
+    if err == redis.Nil {
+        c.JSON(http.StatusOK, err)
+        return
+    }
+
+    // 输出output
+    c.JSON(http.StatusOK, result)
 }
 
 func (handler *UserHandler) UserBlackListAddHandler(c *gin.Context) {
-    return
-    // 禁止加入当前登录用户
+    // 参数paramater
+    _id := c.QueryArray("_id")
+    if len(_id) == 0 {
+        c.JSON(http.StatusBadRequest, gin.H{"message": "_id is null"})
+        return
+    }
+
+    // 禁止加黑当前登录用户
+
+    // redis
+    result, err := handler.redisClient.SAdd(handler.ctx, "userblacklist", _id).Result()
+    if err == redis.Nil {
+        c.JSON(http.StatusOK, err)
+    }
+
+    // 输出output
+    c.JSON(http.StatusOK, result)
 }
 
 func (handler *UserHandler) UserBlackListRemoveHandler(c *gin.Context) {
+    // 参数paramater
+    _id := c.QueryArray("_id")
+    if len(_id) == 0 {
+        c.JSON(http.StatusBadRequest, gin.H{"message": "_id is null"})
+        return
+    }
+
+    // redis
+    result, err := handler.redisClient.SRem(handler.ctx, "userblacklist", _id).Result()
+    if err == redis.Nil {
+        c.JSON(http.StatusOK, err)
+        return
+    }
+
+    // 输出output
+    c.JSON(http.StatusOK, result)
+}
+
+/*
+在线用户
+*/
+func (handler *UserHandler) UserOnlineHandler(c *gin.Context) {
     return
 }
