@@ -286,9 +286,13 @@ func (handler *UserHandler) UserChanegePasswordHandler(c *gin.Context) {
 */
 func (handler *UserHandler) UserLoginHandler(c *gin.Context) {
     // 参数parameter
+    var response common.Response
     var userLogin UserLoginModel
     if err := c.ShouldBindJSON(&userLogin); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        response.Code = 100001
+        response.Message = "invalid user login paramater"
+        response.Error = err.Error()
+        c.JSON(http.StatusBadRequest, response)
         return
     }
 
@@ -296,14 +300,20 @@ func (handler *UserHandler) UserLoginHandler(c *gin.Context) {
     var user UserModel
     result := handler.collection.FindOne(handler.ctx, bson.M{"user_name": userLogin.UserName})
     if result == nil {
-        c.JSON(http.StatusBadRequest, gin.H{"message": result.Err().Error()})
+        response.Code = 100002
+        response.Message = "invalid user name"
+        response.Error = result.Err().Error()
+        c.JSON(http.StatusUnauthorized, response)
         return
     }
     result.Decode(&user)
 
     // 校验用户密码
     if err := common.VerifyPassword(user.Password, userLogin.Password); err != nil {
-        c.JSON(http.StatusUnauthorized, gin.H{"message": "invaild password"})
+        response.Code = 100003
+        response.Message = "invalid user password"
+        response.Error = err.Error()
+        c.JSON(http.StatusUnauthorized, response)
         return
     }
 
@@ -311,14 +321,18 @@ func (handler *UserHandler) UserLoginHandler(c *gin.Context) {
 
     // 检查用户黑名单
     if handler.redisClient.SIsMember(handler.ctx, "userblacklist", _id).Val() {
-        c.JSON(http.StatusUnauthorized, gin.H{"message": "user has been in black list"})
+        response.Code = 100004
+        response.Message = "the user has been locked"
+        c.JSON(http.StatusOK, response)
         return
     }
 
     // 生成token
     tokens, err := GenerateTokens(_id)
     if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        response.Code = 100005
+        response.Message = "invalid user token"
+        c.JSON(http.StatusInternalServerError, response)
         return
     }
 
@@ -327,7 +341,10 @@ func (handler *UserHandler) UserLoginHandler(c *gin.Context) {
     handler.redisClient.Set(handler.ctx, _id+"_"+tokens["refresh_token"], _id, time.Hour*24*7)
 
     // 输出output
-    c.JSON(http.StatusOK, tokens)
+    response.Code = 100000
+    response.Message = "the user has been login successed"
+    response.Data = tokens
+    c.JSON(http.StatusOK, response)
 }
 
 /*
