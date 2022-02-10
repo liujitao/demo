@@ -31,40 +31,55 @@ type List struct {
 // 定义输出结果
 type Response struct {
     Code    int64       `json:"code"`
-    Message string      `json:"message"`
-    Error   string      `json:"error"`
-    Data    interface{} `json:"data"`
+    Message string      `json:"message,omitempty"`
+    Error   string      `json:"error,omitempty"`
+    Data    interface{} `json:"data,omitempty"`
 }
 
-// 定义返回状态码
-
 /*
-1-2位 模块分类 3-4位 模块功能 5-6位 执行状态
-用户登录成功 100000
-用户登录参数无效 100001
-用户名无效 100002
-用户密码无效 100003
-用户已被锁定 100004
-用户token无效 100005
-
-用户退出成功 100100
-用户退出失败 100101
-用户刷新成功 100300
-用户刷新失败 100301
-用户改密成功 100300
-用户改密失败 100301
-用户建立成功 100400
-用户建立失败 100401
-用户获取成功 100500
-用户获取失败 100501
-用户更新成功 100600
-用户更新失败 100601
-用户删除成功 100700
-用户删除失败 100701
-黑名单获取成功 100800
-黑名单获取失败 100801
-黑名单增加成功 100900
-黑名单增加失败 100901
-黑名单移除成功 101000
-黑名单移除失败 101001
+   定义返回状态码: 1-2位 模块分类; 3-4位 模块功能; 5-6位 序列号
 */
+
+var Status = map[int64]string{
+    // 请求参数
+    000101: "Request parameter is invalid.",
+    000102: "Request parameter is null.",
+
+    // mongo处理
+    000201: "Mongodb could not insert data.",
+    000202: "Mongodb could not retrieve data.",
+    000203: "Mongodb could not update data.",
+    000204: "Mongodb could not delete data.",
+
+    // redis处理
+    000301: "Redis could not insert data.",
+    000302: "Redis could not retrieve data.",
+    000303: "Redis could not update data.",
+    000304: "Redis could not delete data.",
+
+    // 用户
+    100100: "User data has been successfully created.",
+    100200: "User data has been successfully retrieved.",
+    100300: "User data has been successfully updated.",
+    100400: "User data has been successfully deleted.",
+    100500: "User list data has been successfully retrieved.",
+
+    100600: "User has been successfully login.",
+    100601: "User name is invalid.",
+    100602: "User password is invalid.",
+    100603: "User has been locked.",
+    100604: "User token is invalid.",
+    100605: "User token wait to expire",
+
+    100700: "User has been successfully logout.",
+    100800: "User has been successfully flushed.",
+    100900: "User password has been successfully changed.",
+
+    101000: "User blacklist has been successfully added.",
+    101100: "User blacklist has been successfully retrieved.",
+    101200: "User blacklist has been successfully removed.",
+
+    // 团队
+
+    // 角色
+}

@@ -1,6 +1,7 @@
 package user
 
 import (
+    "demo/common"
     "fmt"
     "net/http"
     "time"
@@ -14,14 +15,14 @@ const JWT_SECRET = "7ffc6cc0-6dff-11ec-b5e4-97162d942513"
 /*
 生成token
 */
-func GenerateTokens(userID string) (map[string]string, error) {
+func GenerateTokens(uuid string) (map[string]string, error) {
     accessExp := time.Now().Add(time.Minute * 5).Unix()
     refreshExp := time.Now().Add(time.Hour * 24 * 7).Unix()
 
     // access token
     accessToken := jwt.New(jwt.SigningMethodHS256)
     accessClaims := accessToken.Claims.(jwt.MapClaims)
-    accessClaims["user_id"] = userID
+    accessClaims["uuid"] = uuid
     accessClaims["access_exp"] = accessExp
     accessClaims["admin"] = true
 
@@ -33,7 +34,7 @@ func GenerateTokens(userID string) (map[string]string, error) {
     // refresh token
     refreshToken := jwt.New(jwt.SigningMethodHS256)
     refreshClaims := refreshToken.Claims.(jwt.MapClaims)
-    refreshClaims["user_id"] = userID
+    refreshClaims["uuid"] = uuid
     refreshClaims["access_exp"] = accessExp
     refreshClaims["refresh_exp"] = refreshExp
 
@@ -73,31 +74,41 @@ func VerifyToken(tokenString string) (jwt.MapClaims, bool) {
 */
 func (handler *UserHandler) AuthMiddleWare() gin.HandlerFunc {
     return func(c *gin.Context) {
-        // 参数
+        var response common.Response
+
+        // 请求参数
         tokenString := c.GetHeader("Authorization")
         if tokenString == "" {
-            c.JSON(http.StatusUnauthorized, gin.H{"message": "Token has not found"})
+            response.Code = 000102
+            response.Message = common.Status[response.Code]
+            c.JSON(http.StatusBadRequest, response)
             c.Abort()
         }
 
         // 检查token有效性
         claims, ok := VerifyToken(tokenString)
         if !ok {
-            c.JSON(http.StatusUnauthorized, gin.H{"message": "token has invaild"})
+            response.Code = 100604
+            response.Message = common.Status[response.Code]
+            c.JSON(http.StatusUnauthorized, response)
             c.Abort()
         }
-        _id := fmt.Sprintf("%v", claims["user_id"])
+        uuid := fmt.Sprintf("%v", claims["uuid"])
 
         // 检查token白名单
-        keys, _, err := handler.redisClient.Scan(handler.ctx, 0, _id+"*", 2).Result()
+        keys, _, err := handler.redisClient.Scan(handler.ctx, 0, uuid+"*", 2).Result()
         if (err != nil) || (len(keys) == 0) {
-            c.JSON(http.StatusUnauthorized, gin.H{"message": "token has invaild"})
+            response.Code = 100604
+            response.Message = common.Status[response.Code]
+            c.JSON(http.StatusUnauthorized, response)
             c.Abort()
         }
 
         // 检查用户黑名单
-        if handler.redisClient.SIsMember(handler.ctx, "userblacklist", _id).Val() {
-            c.JSON(http.StatusUnauthorized, gin.H{"message": "user has been in black list"})
+        if handler.redisClient.SIsMember(handler.ctx, "userblacklist", uuid).Val() {
+            response.Code = 100603
+            response.Message = common.Status[response.Code]
+            c.JSON(http.StatusUnauthorized, response)
             c.Abort()
         }
 

@@ -9,6 +9,7 @@ import (
 	"log"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -33,7 +34,8 @@ func ImportUserData(ctx context.Context, collection *mongo.Collection) error {
 	var documents []interface{}
 	for _, u := range users {
 		document = bson.D{
-			{"_id", u.ID},
+			{"_id", primitive.NewObjectID()},
+			{"uuid", u.UUID},
 			{"user_name", u.UserName},
 			{"real_name", u.RealName},
 			{"mobile", u.Mobile},

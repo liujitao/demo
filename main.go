@@ -4,6 +4,8 @@ import (
     "context"
     "demo/common"
     "demo/data"
+    "demo/role"
+    "demo/team"
     "demo/user"
     "encoding/json"
     "io/ioutil"
@@ -20,7 +22,10 @@ import (
 // 定义变量
 var Conf *common.Configure
 var userHandler *user.UserHandler
+var teamHandler *team.TeamHandler
+var roleHandler *role.RoleHandler
 
+// 初始化
 func init() {
     // 读取配置文件
     content, err := ioutil.ReadFile("common/config.json")
@@ -56,6 +61,8 @@ func init() {
 
     // 初始化handler
     userHandler = user.MewUserHandler(ctx, db.Collection("user"), redisClient)
+    teamHandler = team.MewTeamHandler(ctx, db.Collection("team"))
+    roleHandler = role.MewRoleHandler(ctx, db.Collection("role"))
 
     // 导入数据
     if count, _ := db.Collection("user").CountDocuments(ctx, bson.M{}); count == 0 {
@@ -78,13 +85,32 @@ func main() {
     {
         // 用户
         authorized.POST("/user", userHandler.CreateUserHandler)
+        authorized.GET("/user/list", userHandler.RetriveUserListHandler)
         authorized.GET("/user", userHandler.RetriveUserHandler)
         authorized.PUT("/user", userHandler.UpdateUserHandler)
         authorized.DELETE("/user", userHandler.DeleteUserHandler)
         authorized.POST("/user/change_password", userHandler.UserChanegePasswordHandler)
-        authorized.GET("/user/blacklist", userHandler.UserBlackListHandler)
+
+        // 用户黑名单
         authorized.POST("/user/blacklist", userHandler.UserBlackListAddHandler)
+        authorized.GET("/user/blacklist", userHandler.UserBlackListRetriveHandler)
         authorized.DELETE("/user/blacklist", userHandler.UserBlackListRemoveHandler)
+
+        // 团队
+        /*
+           authorized.POST("/team", teamHandler.CreateTeamHandler)
+           authorized.GET("/team", teamHandler.RetriveTeamHandler)
+           authorized.PUT("/team", teamHandler.UpdateTeamHandler)
+           authorized.DELETE("/team", teamHandler.DeleteTeamHandler)
+        */
+
+        // 角色
+        /*
+           authorized.POST("/role", roleHandler.CreateRoleHandler)
+           authorized.GET("/role", roleHandler.RetriveRoleHandler)
+           authorized.PUT("/role", roleHandler.UpdateRoleHandler)
+           authorized.DELETE("/role", roleHandler.DeleteRoleHandler)
+        */
     }
 
     // 不使用认证中间件
@@ -93,6 +119,18 @@ func main() {
         router.POST("/user/login", userHandler.UserLoginHandler)
         router.GET("/user/logout", userHandler.UserLogoutHandler)
         router.GET("/user/refresh", userHandler.UserRefreshHandler)
+
+        // 临时
+        router.POST("/team", teamHandler.CreateTeamHandler)
+        router.GET("/team", teamHandler.RetriveTeamHandler)
+        router.PUT("/team", teamHandler.UpdateTeamHandler)
+        router.DELETE("/team", teamHandler.DeleteTeamHandler)
+
+        // 临时
+        router.POST("/role", roleHandler.CreateRoleHandler)
+        router.GET("/role", roleHandler.RetriveRoleHandler)
+        router.PUT("/role", roleHandler.UpdateRoleHandler)
+        router.DELETE("/role", roleHandler.DeleteRoleHandler)
     }
 
     router.Run(Conf.App_host + ":" + Conf.App_port)
