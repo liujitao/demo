@@ -1,0 +1,24 @@
+[
+    {
+        "uuid": "0fe1b9f2-8ae4-11ec-a5b4-87315c29590e",
+        "role_name": "团队经理",
+        "describe": "读写",
+        "user_uuid": [
+            "b040904e-8a30-11ec-917a-17ee5f1bcd74",
+            "b0533aa0-8a30-11ec-b9c3-dbc28ee83f8c"
+        ]
+    },
+    {
+        "uuid": "1767f8e4-8ae4-11ec-9bff-a7276a61dabf",
+        "role_name": "团队员工",
+        "describe": "只读",
+        "user_uuid": [
+            "b047d96c-8a30-11ec-86bb-47637cc95add",
+            "b0491d68-8a30-11ec-bb2c-af6b5601ac06",
+            "b04a60a6-8a30-11ec-93f7-43f76283897b",
+            "b0547dde-8a30-11ec-a76c-5329562bb70c",
+            "b055a718-8a30-11ec-991f-bfa0a776635f",
+            "b056c972-8a30-11ec-a8d2-cfc65ed3fd2f"
+        ]
+    }
+]

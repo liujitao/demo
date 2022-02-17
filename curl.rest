@@ -15,40 +15,30 @@ Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ0Mzg2
     "password": "password"
 }
 
-### retrive user list
-GET http://{{host}}:{{port}}/user/list?search=user99&pageIndex=1&pageSize=20&sort[user_name]=-1 HTTP/1.1
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ0MzkxMDQ2LCJhZG1pbiI6dHJ1ZSwidXNlcl9pZCI6IjYxY2Q0N2IzMzhlNGFjYmQ0MzA2NWMxMSJ9.IGwUr__H8uOcH8aVNOiShe6mMgpyCzKk5rdt9d53zRc
-
 ### retrive user
-GET http://{{host}}:{{port}}/user?_id=61cd47b338e4acbd43065c29 HTTP/1.1
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ0MjkxMjAzLCJhZG1pbiI6dHJ1ZSwidXNlcl9pZCI6IjYxY2Q0N2IzMzhlNGFjYmQ0MzA2NWMxMSJ9.kaj-klrYGyUVyen8_xOVaJBjTg95XwiYRBMYRim8EPs
+GET http://{{host}}:{{port}}/user?uuid=b040904e-8a30-11ec-917a-17ee5f1bcd74 HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ0ODAwNDQ3LCJhZG1pbiI6dHJ1ZSwidXVpZCI6ImIwNDdkOTZjLThhMzAtMTFlYy04NmJiLTQ3NjM3Y2M5NWFkZCJ9.FKRLB5G50YbxAPUpCfxMQkicrtbBtzuFot_uUINt3cI
 
 ### update user
 PUT http://{{host}}:{{port}}/user HTTP/1.1
 Content-Type: {{contentType}}
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwiZXhwIjoxNjQxNTQyMDE1LCJ1c2VyX2lkIjoiNjFjZDQ3YjMzOGU0YWNiZDQzMDY1YzExIn0.htTdkNfaiOCaH9fq0P7-gI3198jyD-S6TzUuIw9L8cU
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ0NDc5NzY5LCJhZG1pbiI6dHJ1ZSwidXVpZCI6ImIwNDdkOTZjLThhMzAtMTFlYy04NmJiLTQ3NjM3Y2M5NWFkZCJ9.mnNB-gHrVkZLhd2Yjd6AGMfT16MwVnTUXIJodF4YQsA
 
 {
-    "uuid": "61d52f2d4460b77d940a49e6",
-    "user_name": "user102",
-    "real_name": "user102",
-    "mobile": "13900000102",
-    "email": "user102@abc.com"
+    "uuid": "b04ce6c8-8a30-11ec-abf4-83661c43fe19",
+    "user_name": "user15-",
+    "real_name": "user15-",
+    "mobile": "1390000015",
+    "email": "user15-@abc.com"
 }
 
 ### delete user
-DELETE http://{{host}}:{{port}}/user?_id=61cd47b338e4acbd43065c95&_id=61d7f140ff161e2edf9fda9d HTTP/1.1
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwiZXhwIjoxNjQxNTQyMjc4LCJ1c2VyX2lkIjoiNjFkN2YxNDBmZjE2MWUyZWRmOWZkYTlkIn0.OICYIIcsyd-Divt2hXfBMQQfmit-C6HI4bGzVqMuN44
+DELETE http://{{host}}:{{port}}/user?uuid=b04ce6c8-8a30-11ec-abf4-83661c43fe19&uuid=b04ba4f2-8a30-11ec-a5fe-ff308d81841a HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ0NDc5NzY5LCJhZG1pbiI6dHJ1ZSwidXVpZCI6ImIwNDdkOTZjLThhMzAtMTFlYy04NmJiLTQ3NjM3Y2M5NWFkZCJ9.mnNB-gHrVkZLhd2Yjd6AGMfT16MwVnTUXIJodF4YQsA
 
-### user change password
-POST http://{{host}}:{{port}}/user/change_password HTTP/1.1
-Content-Type: {{contentType}}
-
-{
-    "_id": "61d52f2d4460b77d940a49e6",
-    "old_password": "123456",
-    "new_password": "password"
-}
+### retrive user list
+GET http://{{host}}:{{port}}/user/list?search=user1&pageIndex=1&pageSize=20&sort[user_name]=1 HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ0ODAwNDQ3LCJhZG1pbiI6dHJ1ZSwidXVpZCI6ImIwNDdkOTZjLThhMzAtMTFlYy04NmJiLTQ3NjM3Y2M5NWFkZCJ9.FKRLB5G50YbxAPUpCfxMQkicrtbBtzuFot_uUINt3cI
 
 ### user login
 POST http://{{host}}:{{port}}/user/login HTTP/1.1
@@ -59,13 +49,24 @@ Content-Type: {{contentType}}
     "password": "password"
 }
 
+### user logout
+GET http://{{host}}:{{port}}/user/logout HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ0Mjg5OTI3LCJhZG1pbiI6dHJ1ZSwidXNlcl9pZCI6IjYxY2Q0N2IzMzhlNGFjYmQ0MzA2NWMxMSJ9._hRu_0m8vWSQ2OsQdBPtknftKc4SaCYB336XJIKqJYI
+
 ### user refresh
 GET http://{{host}}:{{port}}/user/refresh HTTP/1.1
 Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQxODg3MjYxLCJyZWZyZXNoX2V4cCI6MTY0MjQ5MTc2MSwidXNlcl9pZCI6IjYxY2Q0N2IzMzhlNGFjYmQ0MzA2NWMxMSJ9.W_La-15ZPMWkxOsiXUUgLG4yI-epAxSn3y3Jdn6xph0
 
-### user logout
-GET http://{{host}}:{{port}}/user/logout HTTP/1.1
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ0Mjg5OTI3LCJhZG1pbiI6dHJ1ZSwidXNlcl9pZCI6IjYxY2Q0N2IzMzhlNGFjYmQ0MzA2NWMxMSJ9._hRu_0m8vWSQ2OsQdBPtknftKc4SaCYB336XJIKqJYI
+
+### user change password
+POST http://{{host}}:{{port}}/user/change_password HTTP/1.1
+Content-Type: {{contentType}}
+
+{
+    "_id": "61d52f2d4460b77d940a49e6",
+    "old_password": "123456",
+    "new_password": "password"
+}
 
 ### user blacklist 
 GET http://{{host}}:{{port}}/user/blacklist HTTP/1.1
@@ -80,14 +81,34 @@ DELETE http://{{host}}:{{port}}/user/blacklist?_id=61cd47b338e4acbd43065c29&_id=
 Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwiZXhwIjoxNjQxODY2MDA0LCJ1c2VyX2lkIjoiNjFjZDQ3YjMzOGU0YWNiZDQzMDY1YzEwIn0._imHUvmmGWN6crEGNhjLMdrWIrxcK3AQnAmOTBhS2F0
 
 
-### team create
+### create team
 POST http://{{host}}:{{port}}/team HTTP/1.1
 Content-Type: {{contentType}}
 
 {
-    "team_name": "team02",
-    "describe": "第2团队"
+    "team_name": "team01",
+    "describe": "第1团队",
+    "user_uuid": ["6ef2e86c-8ada-11ec-8145-4f19539bf36b"]
 }
+
+### retrive team
+GET http://{{host}}:{{port}}/team?uuid=a6b00dca-8adf-11ec-846a-834d4eb728d2 HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ0ODAwNDQ3LCJhZG1pbiI6dHJ1ZSwidXVpZCI6ImIwNDdkOTZjLThhMzAtMTFlYy04NmJiLTQ3NjM3Y2M5NWFkZCJ9.FKRLB5G50YbxAPUpCfxMQkicrtbBtzuFot_uUINt3cI
+
+### update team
+PUT http://{{host}}:{{port}}/team HTTP/1.1
+Content-Type: {{contentType}}
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ0NDc5NzY5LCJhZG1pbiI6dHJ1ZSwidXVpZCI6ImIwNDdkOTZjLThhMzAtMTFlYy04NmJiLTQ3NjM3Y2M5NWFkZCJ9.mnNB-gHrVkZLhd2Yjd6AGMfT16MwVnTUXIJodF4YQsA
+
+{
+    "team_name": "team01",
+    "describe": "第1团队",
+    "user_uuid": ["6ef2e86c-8ada-11ec-8145-4f19539bf36b"]
+}
+
+### retrive team list
+GET http://{{host}}:{{port}}/team/list?pageIndex=1&pageSize=20&sort[team_name]=1 HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ0ODAwNDQ3LCJhZG1pbiI6dHJ1ZSwidXVpZCI6ImIwNDdkOTZjLThhMzAtMTFlYy04NmJiLTQ3NjM3Y2M5NWFkZCJ9.FKRLB5G50YbxAPUpCfxMQkicrtbBtzuFot_uUINt3cI
 
 
 ### role create
@@ -95,6 +116,15 @@ POST http://{{host}}:{{port}}/role HTTP/1.1
 Content-Type: {{contentType}}
 
 {
-    "role_name": "员工",
-    "describe": "只读操作"
+    "role_name": "管理员",
+    "describe": "读写操作",
+    "user_uuid": ["6ef2e86c-8ada-11ec-8145-4f19539bf36b"]
 }
+
+### retrive role
+GET http://{{host}}:{{port}}/role?uuid=0fe1b9f2-8ae4-11ec-a5b4-87315c29590e HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ0ODAwNDQ3LCJhZG1pbiI6dHJ1ZSwidXVpZCI6ImIwNDdkOTZjLThhMzAtMTFlYy04NmJiLTQ3NjM3Y2M5NWFkZCJ9.FKRLB5G50YbxAPUpCfxMQkicrtbBtzuFot_uUINt3cI
+
+### retrive role list
+GET http://{{host}}:{{port}}/role/list?pageIndex=1&pageSize=20&sort[role_name]=1 HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ0ODAwNDQ3LCJhZG1pbiI6dHJ1ZSwidXVpZCI6ImIwNDdkOTZjLThhMzAtMTFlYy04NmJiLTQ3NjM3Y2M5NWFkZCJ9.FKRLB5G50YbxAPUpCfxMQkicrtbBtzuFot_uUINt3cI

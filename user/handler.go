@@ -47,7 +47,7 @@ func (handler *UserHandler) CreateUserHandler(c *gin.Context) {
 
     // 请求参数parameter
     if err := c.ShouldBindJSON(&user); err != nil {
-        response.Code = 000100
+        response.Code = 000101
         response.Message = common.Status[response.Code]
         response.Error = err.Error()
         c.JSON(http.StatusBadRequest, response)
@@ -82,7 +82,7 @@ func (handler *UserHandler) CreateUserHandler(c *gin.Context) {
 */
 func (handler *UserHandler) RetriveUserHandler(c *gin.Context) {
     var response common.Response
-    var user UserModel
+    var users []UserModel
 
     // 请求参数parameter
     uuid := c.Query("uuid")
@@ -94,42 +94,39 @@ func (handler *UserHandler) RetriveUserHandler(c *gin.Context) {
     }
 
     // 聚合查询aggregate
+    // https://docs.mongodb.com/manual/reference/operator/aggregation/lookup/#std-label-lookup-multiple-joins
     filter := bson.M{"uuid": uuid}
-    /*
-       matchStage := bson.D{{"$match", filter}}
+    matchStage := bson.D{{"$match", filter}}
 
-       lookupStage := bson.D{{"$lookup", bson.D{{"from", "podcasts"}, {"localField", "podcast"}, {"foreignField", "_id"}, {"as", "podcast"}}}}
-       unwindStage := bson.D{{"$unwind", bson.D{{"path", "$podcast"}, {"preserveNullAndEmptyArrays", false}}}}
-       pipeline := mongo.Pipeline{matchStage, lookupStage, unwindStage}
+    lookupStage1 := bson.D{{"$lookup", bson.D{{"from", "team"}, {"localField", "uuid"}, {"foreignField", "user_uuid"}, {"as", "team"}}}}
+    unwindStage1 := bson.D{{"$unwind", bson.D{{"path", "$team"}, {"preserveNullAndEmptyArrays", true}}}}
+    replaceWithStage1 := bson.D{{"$replaceWith", bson.D{{"$mergeObjects", bson.A{bson.D{{"team_name", "$team.team_name"}}, "$$ROOT"}}}}}
 
+    lookupStage2 := bson.D{{"$lookup", bson.D{{"from", "role"}, {"localField", "uuid"}, {"foreignField", "user_uuid"}, {"as", "role"}}}}
+    unwindStage2 := bson.D{{"$unwind", bson.D{{"path", "$role"}, {"preserveNullAndEmptyArrays", true}}}}
+    replaceWithStage2 := bson.D{{"$replaceWith", bson.D{{"$mergeObjects", bson.A{bson.D{{"role_name", "$role.role_name"}}, "$$ROOT"}}}}}
 
-          cursor, err := handler.collection.Aggregate(handler.ctx, pipeline, options)
-          if err != nil {
-              c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-              return
-          }
-          defer cursor.Close(handler.ctx)
+    projectStage := bson.D{{"$project", bson.D{{"team", 0}, {"role", 0}}}}
 
-          if err = cursor.All(handler.ctx, &user); err != nil {
-              c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-              return
-          }
-    */
+    pipeline := mongo.Pipeline{matchStage, lookupStage1, unwindStage1, replaceWithStage1, lookupStage2, unwindStage2, replaceWithStage2, projectStage}
+    options := options.Aggregate().SetMaxTime(2 * time.Second)
 
-    result := handler.collection.FindOne(handler.ctx, filter)
-    if result == nil {
-        response.Code = 000202
-        response.Message = common.Status[response.Code]
-        response.Error = result.Err().Error()
-        c.JSON(http.StatusInternalServerError, response)
+    cursor, err := handler.collection.Aggregate(handler.ctx, pipeline, options)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
-    result.Decode(&user)
+    defer cursor.Close(handler.ctx)
+
+    if err = cursor.All(handler.ctx, &users); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
 
     // 输出output
     response.Code = 100200
     response.Message = common.Status[response.Code]
-    response.Data = user
+    response.Data = users[0]
     c.JSON(http.StatusOK, response)
 }
 
@@ -209,7 +206,7 @@ func (handler *UserHandler) DeleteUserHandler(c *gin.Context) {
     // 写入redis token  删除access_token refresh_token
 
     // 输出output
-    response.Code = 100300
+    response.Code = 100400
     response.Message = common.Status[response.Code]
     response.Data = result
     c.JSON(http.StatusOK, response)
@@ -275,13 +272,18 @@ func (handler *UserHandler) RetriveUserListHandler(c *gin.Context) {
     }
     sortStage := bson.D{{"$sort", sorts}}
 
-    // join
-    lookupStage := bson.D{{"$lookup", bson.D{{"from", "team"}, {"localField", "team_uuid"}, {"foreignField", "uuid"}, {"as", "team"}}}}
-    replaceRootStage := bson.D{{"$replaceRoot", bson.D{{"newRoot", bson.D{{"$mergeObjects", bson.A{bson.D{{"$arrayElemAt", bson.A{"$team", 1}}}, "$$ROOT"}}}}}}}
-    projectStage := bson.D{{"$project", bson.D{{"team_name", 1}}}}
-
     // 聚合查询aggregate
-    pipeline := mongo.Pipeline{matchStage, skipStage, limitStage, sortStage, lookupStage, replaceRootStage, projectStage}
+    lookupStage1 := bson.D{{"$lookup", bson.D{{"from", "team"}, {"localField", "uuid"}, {"foreignField", "user_uuid"}, {"as", "team"}}}}
+    unwindStage1 := bson.D{{"$unwind", bson.D{{"path", "$team"}, {"preserveNullAndEmptyArrays", true}}}}
+    replaceWithStage1 := bson.D{{"$replaceWith", bson.D{{"$mergeObjects", bson.A{bson.D{{"team_name", "$team.team_name"}}, "$$ROOT"}}}}}
+
+    lookupStage2 := bson.D{{"$lookup", bson.D{{"from", "role"}, {"localField", "uuid"}, {"foreignField", "user_uuid"}, {"as", "role"}}}}
+    unwindStage2 := bson.D{{"$unwind", bson.D{{"path", "$role"}, {"preserveNullAndEmptyArrays", true}}}}
+    replaceWithStage2 := bson.D{{"$replaceWith", bson.D{{"$mergeObjects", bson.A{bson.D{{"role_name", "$role.role_name"}}, "$$ROOT"}}}}}
+
+    projectStage := bson.D{{"$project", bson.D{{"team", 0}, {"role", 0}}}}
+
+    pipeline := mongo.Pipeline{matchStage, lookupStage1, unwindStage1, replaceWithStage1, lookupStage2, unwindStage2, replaceWithStage2, projectStage, skipStage, limitStage, sortStage}
     options := options.Aggregate().SetMaxTime(2 * time.Second)
 
     cursor, err := handler.collection.Aggregate(handler.ctx, pipeline, options)
@@ -557,7 +559,7 @@ func (handler *UserHandler) UserChanegePasswordHandler(c *gin.Context) {
 }
 
 /*
-用户黑名单
+加入用户黑名单
 */
 func (handler *UserHandler) UserBlackListAddHandler(c *gin.Context) {
     var response common.Response
@@ -589,6 +591,9 @@ func (handler *UserHandler) UserBlackListAddHandler(c *gin.Context) {
     c.JSON(http.StatusOK, response)
 }
 
+/*
+获取用户黑名单
+*/
 func (handler *UserHandler) UserBlackListRetriveHandler(c *gin.Context) {
     var response common.Response
 
@@ -608,6 +613,9 @@ func (handler *UserHandler) UserBlackListRetriveHandler(c *gin.Context) {
     c.JSON(http.StatusOK, response)
 }
 
+/*
+移除用户黑名单
+*/
 func (handler *UserHandler) UserBlackListRemoveHandler(c *gin.Context) {
     var response common.Response
 

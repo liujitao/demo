@@ -80,6 +80,16 @@ var Status = map[int64]string{
     101200: "User blacklist has been successfully removed.",
 
     // 团队
+    110100: "Team data has been successfully created.",
+    110200: "Team data has been successfully retrieved.",
+    110300: "Team data has been successfully updated.",
+    110400: "Team data has been successfully deleted.",
+    110500: "Team list data has been successfully retrieved.",
 
     // 角色
+    120100: "Role data has been successfully created.",
+    120200: "Role data has been successfully retrieved.",
+    120300: "Role data has been successfully updated.",
+    120400: "Role data has been successfully deleted.",
+    120500: "Role list data has been successfully retrieved.",
 }

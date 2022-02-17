@@ -16,10 +16,10 @@ type UserModel struct {
     Password  string             `json:"password" bson:"password"`
     CreateAt  time.Time          `json:"create_at" bson:"create_at"`
     UpdateAt  time.Time          `json:"update_at" bson:"update_at"`
-    CreateMan string             `json:"create_man,omitempty" bson:"create_man,omitempty"`
-    UpdateMan string             `json:"update_man,omitempty" bson:"update_man,omitempty"`
-    Team      string             `json:"team_uuid,omitempty" bson:"team_uuid,omitempty"`
-    Role      string             `json:"role_uuid,omitempty" bson:"role_uuid,omitempty"`
+    CreateMan string             `json:"create_man" bson:"create_man"`
+    UpdateMan string             `json:"update_man" bson:"update_man"`
+    TeamName  string             `json:"team_name" bson:"team_name,omitempty"`
+    RoleName  string             `json:"role_name" bson:"role_name,omitempty"`
 }
 
 type UserPasswordModel struct {
