@@ -37,59 +37,55 @@ type Response struct {
 }
 
 /*
-   定义返回状态码: 1-2位 模块分类; 3-4位 模块功能; 5-6位 序列号
+   定义返回状态码: 1-2位 模块分类; 3-5位 模块功能
 */
 
 var Status = map[int64]string{
-    // 请求参数
-    000101: "Request parameter is invalid.",
-    000102: "Request parameter is null.",
+    // 请求处理
+    01001: "Request parameter is invalid.",
+    01002: "Request parameter is null.",
 
     // mongo处理
-    000201: "Mongodb could not insert data.",
-    000202: "Mongodb could not retrieve data.",
-    000203: "Mongodb could not update data.",
-    000204: "Mongodb could not delete data.",
+    02001: "Mongodb could not insert data.",
+    02002: "Mongodb could not retrieve data.",
+    02003: "Mongodb could not update data.",
+    02004: "Mongodb could not delete data.",
 
     // redis处理
-    000301: "Redis could not insert data.",
-    000302: "Redis could not retrieve data.",
-    000303: "Redis could not update data.",
-    000304: "Redis could not delete data.",
+    03001: "Redis could not insert data.",
+    03002: "Redis could not retrieve data.",
+    03003: "Redis could not update data.",
+    03004: "Redis could not delete data.",
 
-    // 用户
-    100100: "User data has been successfully created.",
-    100200: "User data has been successfully retrieved.",
-    100300: "User data has been successfully updated.",
-    100400: "User data has been successfully deleted.",
-    100500: "User list data has been successfully retrieved.",
+    // 用户验证
+    10000: "User has been successfully login.",
+    10001: "User has been successfully logout.",
+    10002: "User loginID or password is invalid.",
+    10003: "User token has been expired or invalid.",
+    10004: "User token wait to expire",
+    10005: "User token has been successfully reflushed.",
+    10006: "User password has been successfully changed.",
+    10007: "User has been locked.",
+    // 锁定用户： 存储在redis中的access_token移除；用户id放入redis，refresh_token刷新时比对用户id
 
-    100600: "User has been successfully login.",
-    100601: "User name is invalid.",
-    100602: "User password is invalid.",
-    100603: "User has been locked.",
-    100604: "User token is invalid.",
-    100605: "User token wait to expire",
+    // 用户处理
+    11001: "User data has been successfully created.",
+    11002: "User data has been successfully retrieved.",
+    11003: "User data has been successfully updated.",
+    11004: "User data has been successfully deleted.",
+    11005: "User list data has been successfully retrieved.",
 
-    100700: "User has been successfully logout.",
-    100800: "User has been successfully flushed.",
-    100900: "User password has been successfully changed.",
+    // 团队处理
+    12001: "Team data has been successfully created.",
+    12002: "Team data has been successfully retrieved.",
+    12003: "Team data has been successfully updated.",
+    12004: "Team data has been successfully deleted.",
+    12005: "Team list data has been successfully retrieved.",
 
-    101000: "User blacklist has been successfully added.",
-    101100: "User blacklist has been successfully retrieved.",
-    101200: "User blacklist has been successfully removed.",
-
-    // 团队
-    110100: "Team data has been successfully created.",
-    110200: "Team data has been successfully retrieved.",
-    110300: "Team data has been successfully updated.",
-    110400: "Team data has been successfully deleted.",
-    110500: "Team list data has been successfully retrieved.",
-
-    // 角色
-    120100: "Role data has been successfully created.",
-    120200: "Role data has been successfully retrieved.",
-    120300: "Role data has been successfully updated.",
-    120400: "Role data has been successfully deleted.",
-    120500: "Role list data has been successfully retrieved.",
+    // 角色处理
+    13001: "Role data has been successfully created.",
+    13002: "Role data has been successfully retrieved.",
+    13003: "Role data has been successfully updated.",
+    13004: "Role data has been successfully deleted.",
+    13005: "Role list data has been successfully retrieved.",
 }

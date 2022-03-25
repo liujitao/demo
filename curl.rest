@@ -1,9 +1,10 @@
 @host = 127.0.0.1
 @port = 8000
+@version = v2
 @contentType = application/json
 
 ### create user
-POST http://{{host}}:{{port}}/user HTTP/1.1
+POST http://{{host}}:{{port}}/{{version}}/user HTTP/1.1
 Content-Type: {{contentType}}
 Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ0Mzg2MDA3LCJhZG1pbiI6dHJ1ZSwidXNlcl9pZCI6IjYxY2Q0N2IzMzhlNGFjYmQ0MzA2NWMxMSJ9.lQgE51ZLzoTPOdnjNhLSjGpggs6g7g7I6LvKd7MC8Zw
 
@@ -37,15 +38,16 @@ DELETE http://{{host}}:{{port}}/user?uuid=b04ce6c8-8a30-11ec-abf4-83661c43fe19&u
 Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ0NDc5NzY5LCJhZG1pbiI6dHJ1ZSwidXVpZCI6ImIwNDdkOTZjLThhMzAtMTFlYy04NmJiLTQ3NjM3Y2M5NWFkZCJ9.mnNB-gHrVkZLhd2Yjd6AGMfT16MwVnTUXIJodF4YQsA
 
 ### retrive user list
-GET http://{{host}}:{{port}}/user/list?search=user1&pageIndex=1&pageSize=20&sort[user_name]=1 HTTP/1.1
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ0ODAwNDQ3LCJhZG1pbiI6dHJ1ZSwidXVpZCI6ImIwNDdkOTZjLThhMzAtMTFlYy04NmJiLTQ3NjM3Y2M5NWFkZCJ9.FKRLB5G50YbxAPUpCfxMQkicrtbBtzuFot_uUINt3cI
+GET http://{{host}}:{{port}}/user/list?search=user1&pageIndex=1&pageSize=2&sort[user_name]=1 HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ1NDEwMzM0LCJhZG1pbiI6dHJ1ZSwidXVpZCI6ImIwNDdkOTZjLThhMzAtMTFlYy04NmJiLTQ3NjM3Y2M5NWFkZCJ9.XQHAJgl7od0vVzGzXH0oHzem1raAlM3aMWFwAIIVk2Q
 
 ### user login
-POST http://{{host}}:{{port}}/user/login HTTP/1.1
+POST http://{{host}}:{{port}}/{{version}}/user/login HTTP/1.1
 Content-Type: {{contentType}}
 
 {
-    "user_name": "user11",
+    # "login_id": "13900000010",
+    "login_id": "user10@abc.com",
     "password": "password"
 }
 

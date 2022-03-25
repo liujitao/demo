@@ -10,7 +10,6 @@ type UserModel struct {
     ID        primitive.ObjectID `json:"_id" bson:"_id"`
     UUID      string             `json:"uuid" bson:"uuid"`
     UserName  string             `json:"user_name" bson:"user_name"`
-    RealName  string             `json:"real_name" bson:"real_name"`
     Mobile    string             `json:"mobile" bson:"mobile"`
     Email     string             `json:"email" bson:"email"`
     Password  string             `json:"password" bson:"password"`
@@ -29,6 +28,6 @@ type UserPasswordModel struct {
 }
 
 type UserLoginModel struct {
-    UserName string `json:"user_name"`
+    LoginID  string `json:"login_id"`
     Password string `json:"password"`
 }

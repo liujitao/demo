@@ -84,7 +84,6 @@ func init() {
                 {"_id", primitive.NewObjectID()},
                 {"uuid", u.UUID},
                 {"user_name", u.UserName},
-                {"real_name", u.RealName},
                 {"mobile", u.Mobile},
                 {"email", u.Email},
                 {"password", common.SetPassword(u.Password)},
@@ -169,9 +168,10 @@ func main() {
 
     router := gin.New()
     router.SetTrustedProxies([]string{})
+    unauthorized := router.Group("/v2")
 
     // 使用认证中间件
-    authorized := router.Group("/")
+    authorized := router.Group("/v2")
     authorized.Use(userHandler.AuthMiddleWare())
     {
         // 用户
@@ -188,42 +188,24 @@ func main() {
         authorized.DELETE("/user/blacklist", userHandler.UserBlackListRemoveHandler)
 
         // 团队
-        /*
-           authorized.POST("/team", teamHandler.CreateTeamHandler)
-           authorized.GET("/team", teamHandler.RetriveTeamHandler)
-           authorized.PUT("/team", teamHandler.UpdateTeamHandler)
-           authorized.DELETE("/team", teamHandler.DeleteTeamHandler)
-        */
+        authorized.POST("/team", teamHandler.CreateTeamHandler)
+        authorized.GET("/team", teamHandler.RetriveTeamHandler)
+        authorized.PUT("/team", teamHandler.UpdateTeamHandler)
+        authorized.DELETE("/team", teamHandler.DeleteTeamHandler)
 
         // 角色
-        /*
-           authorized.POST("/role", roleHandler.CreateRoleHandler)
-           authorized.GET("/role", roleHandler.RetriveRoleHandler)
-           authorized.PUT("/role", roleHandler.UpdateRoleHandler)
-           authorized.DELETE("/role", roleHandler.DeleteRoleHandler)
-        */
+        authorized.POST("/role", roleHandler.CreateRoleHandler)
+        authorized.GET("/role", roleHandler.RetriveRoleHandler)
+        authorized.PUT("/role", roleHandler.UpdateRoleHandler)
+        authorized.DELETE("/role", roleHandler.DeleteRoleHandler)
     }
 
     // 不使用认证中间件
     {
-        router.POST("/user/register", userHandler.CreateUserHandler)
-        router.POST("/user/login", userHandler.UserLoginHandler)
-        router.GET("/user/logout", userHandler.UserLogoutHandler)
-        router.GET("/user/refresh", userHandler.UserRefreshHandler)
-
-        // 临时
-        router.POST("/team", teamHandler.CreateTeamHandler)
-        router.GET("/team", teamHandler.RetriveTeamHandler)
-        router.PUT("/team", teamHandler.UpdateTeamHandler)
-        router.DELETE("/team", teamHandler.DeleteTeamHandler)
-        router.GET("/team/list", teamHandler.RetriveTeamListHandler)
-
-        // 临时
-        router.POST("/role", roleHandler.CreateRoleHandler)
-        router.GET("/role", roleHandler.RetriveRoleHandler)
-        router.PUT("/role", roleHandler.UpdateRoleHandler)
-        router.DELETE("/role", roleHandler.DeleteRoleHandler)
-        router.GET("/role/list", roleHandler.RetriveRoleListHandler)
+        unauthorized.POST("/user/register", userHandler.CreateUserHandler)
+        unauthorized.POST("/user/login", userHandler.UserLoginHandler)
+        unauthorized.GET("/user/logout", userHandler.UserLogoutHandler)
+        unauthorized.GET("/user/refresh", userHandler.UserRefreshHandler)
     }
 
     router.Run(Conf.App_host + ":" + Conf.App_port)

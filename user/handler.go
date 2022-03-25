@@ -47,7 +47,7 @@ func (handler *UserHandler) CreateUserHandler(c *gin.Context) {
 
     // 请求参数parameter
     if err := c.ShouldBindJSON(&user); err != nil {
-        response.Code = 000101
+        response.Code = 01001
         response.Message = common.Status[response.Code]
         response.Error = err.Error()
         c.JSON(http.StatusBadRequest, response)
@@ -63,7 +63,7 @@ func (handler *UserHandler) CreateUserHandler(c *gin.Context) {
 
     _, err := handler.collection.InsertOne(handler.ctx, user)
     if err != nil {
-        response.Code = 000201
+        response.Code = 02001
         response.Message = common.Status[response.Code]
         response.Error = err.Error()
         c.JSON(http.StatusInternalServerError, response)
@@ -71,7 +71,7 @@ func (handler *UserHandler) CreateUserHandler(c *gin.Context) {
     }
 
     // 输出output
-    response.Code = 100100
+    response.Code = 10000
     response.Message = common.Status[response.Code]
     response.Data = user
     c.JSON(http.StatusOK, response)
@@ -151,7 +151,6 @@ func (handler *UserHandler) UpdateUserHandler(c *gin.Context) {
     update := bson.M{
         "$set": bson.M{
             "user_name": user.UserName,
-            "real_name": user.RealName,
             "mobile":    user.Mobile,
             "email":     user.Email,
             "update_at": time.Now(),
@@ -226,9 +225,6 @@ func (handler *UserHandler) RetriveUserListHandler(c *gin.Context) {
             "$or": []bson.M{
                 {
                     "user_name": bson.M{"$regex": primitive.Regex{Pattern: search, Options: "i"}},
-                },
-                {
-                    "real_name": bson.M{"$regex": primitive.Regex{Pattern: search, Options: "i"}},
                 },
                 {
                     "mobile": bson.M{"$regex": primitive.Regex{Pattern: search, Options: "i"}},
@@ -328,7 +324,7 @@ func (handler *UserHandler) UserLoginHandler(c *gin.Context) {
 
     // 请求参数parameter
     if err := c.ShouldBindJSON(&userLogin); err != nil {
-        response.Code = 000101
+        response.Code = 01001
         response.Message = common.Status[response.Code]
         response.Error = err.Error()
         c.JSON(http.StatusBadRequest, response)
@@ -337,9 +333,15 @@ func (handler *UserHandler) UserLoginHandler(c *gin.Context) {
 
     // 数据库处理mongo （校验密码和锁定）
     var user UserModel
-    result := handler.collection.FindOne(handler.ctx, bson.M{"user_name": userLogin.UserName})
+    filter := bson.D{
+        {"$or", bson.A{
+            bson.D{{"mobile", userLogin.LoginID}}, bson.D{{"email", userLogin.LoginID}},
+        }},
+    }
+    result := handler.collection.FindOne(handler.ctx, filter)
+
     if result == nil {
-        response.Code = 100601
+        response.Code = 02002
         response.Message = common.Status[response.Code]
         response.Error = result.Err().Error()
         c.JSON(http.StatusUnauthorized, response)
@@ -349,7 +351,7 @@ func (handler *UserHandler) UserLoginHandler(c *gin.Context) {
 
     // 校验用户密码
     if err := common.VerifyPassword(user.Password, userLogin.Password); err != nil {
-        response.Code = 100602
+        response.Code = 10002
         response.Message = common.Status[response.Code]
         response.Error = err.Error()
         c.JSON(http.StatusUnauthorized, response)
@@ -357,9 +359,9 @@ func (handler *UserHandler) UserLoginHandler(c *gin.Context) {
     }
 
     uuid := user.UUID
-    // 检查用户黑名单
+    // 检查用户锁定
     if handler.redisClient.SIsMember(handler.ctx, "userblacklist", uuid).Val() {
-        response.Code = 100603
+        response.Code = 10007
         response.Message = common.Status[response.Code]
         c.JSON(http.StatusUnauthorized, response)
         return
@@ -368,9 +370,8 @@ func (handler *UserHandler) UserLoginHandler(c *gin.Context) {
     // 生成token
     tokens, _ := GenerateTokens(uuid)
 
-    // redis处理 (增加新token)
+    // redis处理 (写入token)
     handler.redisClient.Set(handler.ctx, uuid+"_"+tokens["access_token"], uuid, time.Minute*5)
-    handler.redisClient.Set(handler.ctx, uuid+"_"+tokens["refresh_token"], uuid, time.Hour*24*7)
 
     // 输出output
     response.Code = 100600
