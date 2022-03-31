@@ -51,8 +51,8 @@ func (handler *RoleHandler) CreateRoleHandler(c *gin.Context) {
     }
 
     // 数据库处理mongo
-    role.ID = primitive.NewObjectID()
-    role.UUID = uuid.NewString()
+    role._ID = primitive.NewObjectID()
+    role.ID = uuid.NewString()
     role.CreateAt = time.Now()
     role.UpdateAt = time.Now()
 
@@ -143,7 +143,7 @@ func (handler *RoleHandler) UpdateRoleHandler(c *gin.Context) {
 
     // 写入mongo
     // 数据库处理mongo
-    filter := bson.M{"uuid": role.UUID}
+    filter := bson.M{"id": role.ID}
     options := options.FindOneAndUpdate().SetReturnDocument(1)
     update := bson.M{
         "$set": bson.M{

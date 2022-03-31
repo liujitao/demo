@@ -1,17 +1,18 @@
 {
     "mongo_host": "127.0.0.1",
     "mongo_port": "27017",
-    "mongo_user": "admin",
-    "mongo_password": "password",
+    "mongo_user": "demo",
+    "mongo_password": "demo",
     "mongo_database": "demo",
     "redis_host": "127.0.0.1",
     "redis_port": "6379",
     "redis_password": "",
-    "redis_expire_ttl": 3600,
-    "app_host": "127.0.0.1",
+    "app_host": "0.0.0.0",
     "app_port": "8000",
     "app_release_mode": false,
     "page_index": 1,
     "page_size": 20,
-    "default_password": "abcd@1234"
+    "default_password": "abcd@1234",
+    "access_token_exp": 15,
+    "refresh_token_exp": 10080
 }

@@ -1,24 +1,24 @@
 [
     {
-        "uuid": "a6b00dca-8adf-11ec-846a-834d4eb728d2",
+        "id": "c9163ilgfvm2iriblg90",
         "team_name": "第1团队",
         "describe": "第1团队",
-        "user_uuid": [
-            "b040904e-8a30-11ec-917a-17ee5f1bcd74",
-            "b047d96c-8a30-11ec-86bb-47637cc95add",
-            "b0491d68-8a30-11ec-bb2c-af6b5601ac06",
-            "b04a60a6-8a30-11ec-93f7-43f76283897b"
+        "user_id": [
+            "c9163c5gfvm2hkhv1hj0",
+            "c9163c5gfvm2hkhv1hjg",
+            "c9163c5gfvm2hkhv1hk0",
+            "c9163c5gfvm2hkhv1hkg"
         ]
     },
     {
-        "uuid": "b040904e-8a30-11ec-917a-17ee5f1bcd74",
+        "id": "c9163ilgfvm2iriblg9g",
         "team_name": "第2团队",
         "describe": "第2团队",
-        "user_uuid": [
-            "b0533aa0-8a30-11ec-b9c3-dbc28ee83f8c",
-            "b0547dde-8a30-11ec-a76c-5329562bb70c",
-            "b055a718-8a30-11ec-991f-bfa0a776635f",
-            "b056c972-8a30-11ec-a8d2-cfc65ed3fd2f"
+        "user_id": [
+            "c9163c5gfvm2hkhv1hm0",
+            "c9163c5gfvm2hkhv1hmg",
+            "c9163c5gfvm2hkhv1hn0",
+            "c9163c5gfvm2hkhv1hng"
         ]
     }
 ]

@@ -7,6 +7,7 @@ import (
     "time"
 
     "github.com/gin-gonic/gin"
+    "github.com/go-redis/redis/v8"
     "github.com/golang-jwt/jwt"
 )
 
@@ -15,58 +16,48 @@ const JWT_SECRET = "7ffc6cc0-6dff-11ec-b5e4-97162d942513"
 /*
 生成token
 */
-func GenerateTokens(uuid string) (map[string]string, error) {
-    accessExp := time.Now().Add(time.Minute * 5).Unix()
-    refreshExp := time.Now().Add(time.Hour * 24 * 7).Unix()
-
+func GenerateTokens(id string) map[string]string {
     // access token
-    accessToken := jwt.New(jwt.SigningMethodHS256)
-    accessClaims := accessToken.Claims.(jwt.MapClaims)
-    accessClaims["uuid"] = uuid
-    accessClaims["access_exp"] = accessExp
-    accessClaims["admin"] = true
-
-    accessString, err := accessToken.SignedString([]byte(JWT_SECRET))
-    if err != nil {
-        return nil, err
+    accessToken := jwt.New(jwt.GetSigningMethod("HS256"))
+    accessToken.Claims = jwt.MapClaims{
+        "id":  id,
+        "exp": time.Now().Add(time.Minute * time.Duration(common.Conf.Access_token_exp)).Unix(),
     }
+    accessString, _ := accessToken.SignedString([]byte(JWT_SECRET))
 
     // refresh token
-    refreshToken := jwt.New(jwt.SigningMethodHS256)
-    refreshClaims := refreshToken.Claims.(jwt.MapClaims)
-    refreshClaims["uuid"] = uuid
-    refreshClaims["access_exp"] = accessExp
-    refreshClaims["refresh_exp"] = refreshExp
-
-    refreshString, err := refreshToken.SignedString([]byte(JWT_SECRET))
-    if err != nil {
-        return nil, err
+    refreshToken := jwt.New(jwt.GetSigningMethod("HS256"))
+    refreshToken.Claims = jwt.MapClaims{
+        "id":  id,
+        "exp": time.Now().Add(time.Minute * time.Duration(common.Conf.Refresh_token_exp)).Unix(),
     }
+    refreshString, _ := refreshToken.SignedString([]byte(JWT_SECRET))
 
-    // return result
-    token := map[string]string{"access_token": accessString, "refresh_token": refreshString}
-    return token, nil
+    // return
+    tokens := map[string]string{"access_token": accessString, "refresh_token": refreshString}
+    return tokens
 }
 
 /*
-检查token
+解析token
 */
-func VerifyToken(tokenString string) (jwt.MapClaims, bool) {
+func ParseToken(tokenString string) (string, error) {
     token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
         if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
             return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
         }
         return []byte(JWT_SECRET), nil
     })
+
     if err != nil {
-        return nil, false
+        return "", nil
     }
 
-    claims, ok := token.Claims.(jwt.MapClaims)
-    if !ok && !token.Valid {
-        return claims, false
+    if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+        return fmt.Sprintf("%v", claims["id"]), nil
+    } else {
+        return "", nil
     }
-    return claims, true
 }
 
 /*
@@ -79,34 +70,32 @@ func (handler *UserHandler) AuthMiddleWare() gin.HandlerFunc {
         // 请求参数
         tokenString := c.GetHeader("Authorization")
         if tokenString == "" {
-            response.Code = 000102
+            response.Code = 01001
             response.Message = common.Status[response.Code]
             c.JSON(http.StatusBadRequest, response)
             c.Abort()
         }
 
         // 检查token有效性
-        claims, ok := VerifyToken(tokenString)
-        if !ok {
-            response.Code = 100604
-            response.Message = common.Status[response.Code]
-            c.JSON(http.StatusUnauthorized, response)
-            c.Abort()
-        }
-        uuid := fmt.Sprintf("%v", claims["uuid"])
-
-        // 检查token白名单
-        keys, _, err := handler.redisClient.Scan(handler.ctx, 0, uuid+"*", 2).Result()
-        if (err != nil) || (len(keys) == 0) {
-            response.Code = 100604
+        id, err := ParseToken(tokenString)
+        if err != nil {
+            response.Code = 10003
             response.Message = common.Status[response.Code]
             c.JSON(http.StatusUnauthorized, response)
             c.Abort()
         }
 
-        // 检查用户黑名单
-        if handler.redisClient.SIsMember(handler.ctx, "userblacklist", uuid).Val() {
-            response.Code = 100603
+        // 检查redis是否存在
+        if val, err := handler.redisClient.Get(handler.ctx, id).Result(); (err == redis.Nil) || (val != tokenString) {
+            response.Code = 10003
+            response.Message = common.Status[response.Code]
+            c.JSON(http.StatusUnauthorized, response)
+            c.Abort()
+        }
+
+        // 检查token用户是否在锁定名单
+        if handler.redisClient.SIsMember(handler.ctx, "UserLock", id).Val() {
+            response.Code = 100607
             response.Message = common.Status[response.Code]
             c.JSON(http.StatusUnauthorized, response)
             c.Abort()

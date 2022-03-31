@@ -1,9 +1,19 @@
-FROM golang:1.17-alpine
-ENV GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOPROXY=https://goproxy.io,direct
+#
+# Build
+#
+FROM golang:1.17-alpine AS build-env
+ENV GOPROXY https://goproxy.cn,direct
 
-RUN mkdir -p /app
 WORKDIR /app
-COPY . .
-RUN go mod download && go build -o main .
+COPY . /app
+
+RUN go mod download \
+    && CGO_ENABLED=0 GOOS=linux go build -o /demo-app
+
+#
+# Deploy
+#
+FROM gcr.io/distroless/static
+COPY --from=build-env /demo-app /
 EXPOSE 8000
-ENTRYPOINT ["./main"]
+ENTRYPOINT ["./demo-app"]

@@ -2,21 +2,22 @@ package common
 
 // 定义配置文件
 type Configure struct {
-    Mongo_host       string
-    Mongo_port       string
-    Mongo_user       string
-    Mongo_password   string
-    Mongo_database   string
-    Redis_host       string
-    Redis_port       string
-    Redis_password   string
-    Redis_expire_at  int64
-    App_host         string
-    App_port         string
-    App_release_mode bool
-    Page_index       int64
-    Page_size        int64
-    Default_password string
+    Mongo_host        string
+    Mongo_port        string
+    Mongo_user        string
+    Mongo_password    string
+    Mongo_database    string
+    Redis_host        string
+    Redis_port        string
+    Redis_password    string
+    App_host          string
+    App_port          string
+    App_release_mode  bool
+    Page_index        int64
+    Page_size         int64
+    Default_password  string
+    Access_token_exp  int64
+    Refresh_token_exp int64
 }
 
 // 定义列表输出结果
@@ -41,32 +42,16 @@ type Response struct {
 */
 
 var Status = map[int64]string{
-    // 请求处理
-    01001: "Request parameter is invalid.",
-    01002: "Request parameter is null.",
-
-    // mongo处理
-    02001: "Mongodb could not insert data.",
-    02002: "Mongodb could not retrieve data.",
-    02003: "Mongodb could not update data.",
-    02004: "Mongodb could not delete data.",
-
-    // redis处理
-    03001: "Redis could not insert data.",
-    03002: "Redis could not retrieve data.",
-    03003: "Redis could not update data.",
-    03004: "Redis could not delete data.",
-
     // 用户验证
     10000: "User has been successfully login.",
     10001: "User has been successfully logout.",
     10002: "User loginID or password is invalid.",
     10003: "User token has been expired or invalid.",
-    10004: "User token wait to expire",
+    10004: "User token has been not generated.",
     10005: "User token has been successfully reflushed.",
     10006: "User password has been successfully changed.",
     10007: "User has been locked.",
-    // 锁定用户： 存储在redis中的access_token移除；用户id放入redis，refresh_token刷新时比对用户id
+    10008: "User token has not expired.",
 
     // 用户处理
     11001: "User data has been successfully created.",
@@ -88,4 +73,20 @@ var Status = map[int64]string{
     13003: "Role data has been successfully updated.",
     13004: "Role data has been successfully deleted.",
     13005: "Role list data has been successfully retrieved.",
+
+    // 请求处理
+    21001: "Request parameter is invalid.",
+    21002: "Request parameter is null.",
+
+    // mongo处理
+    22001: "Mongodb could not insert data.",
+    22002: "Mongodb could not retrieve data.",
+    22003: "Mongodb could not update data.",
+    22004: "Mongodb could not delete data.",
+
+    // redis处理
+    23001: "Redis could not insert data.",
+    23002: "Redis could not retrieve data.",
+    23003: "Redis could not update data.",
+    23004: "Redis could not delete data.",
 }

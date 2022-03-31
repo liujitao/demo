@@ -9,7 +9,7 @@ import (
     "time"
 
     "github.com/gin-gonic/gin"
-    "github.com/google/uuid"
+    "github.com/rs/xid"
     "go.mongodb.org/mongo-driver/bson"
     "go.mongodb.org/mongo-driver/bson/primitive"
     "go.mongodb.org/mongo-driver/mongo"
@@ -51,8 +51,8 @@ func (handler *TeamHandler) CreateTeamHandler(c *gin.Context) {
     }
 
     // 数据库处理mongo
-    team.ID = primitive.NewObjectID()
-    team.UUID = uuid.NewString()
+    team._ID = primitive.NewObjectID()
+    team.ID = xid.New().String()
     team.CreateAt = time.Now()
     team.UpdateAt = time.Now()
 
@@ -80,8 +80,8 @@ func (handler *TeamHandler) RetriveTeamHandler(c *gin.Context) {
     var teams []TeamModel
 
     // 请求参数parameter
-    uuid := c.Query("uuid")
-    if uuid == "" {
+    id := c.Query("id")
+    if id == "" {
         response.Code = 000102
         response.Message = common.Status[response.Code]
         c.JSON(http.StatusBadRequest, response)
@@ -90,10 +90,10 @@ func (handler *TeamHandler) RetriveTeamHandler(c *gin.Context) {
 
     // 聚合查询aggregate
     // https://docs.mongodb.com/manual/reference/operator/aggregation/lookup/#std-label-lookup-multiple-joins
-    filter := bson.M{"uuid": uuid}
+    filter := bson.M{"id": id}
     matchStage := bson.D{{"$match", filter}}
 
-    lookupStage := bson.D{{"$lookup", bson.D{{"from", "user"}, {"localField", "user_uuid"}, {"foreignField", "uuid"}, {"as", "user"}}}}
+    lookupStage := bson.D{{"$lookup", bson.D{{"from", "user"}, {"localField", "user_uuid"}, {"foreignField", "id"}, {"as", "user"}}}}
     setStage := bson.D{{"$set", bson.D{{"user_name", "$user.real_name"}}}}
     projectStage := bson.D{{"$project", bson.D{{"user", 0}}}}
 
@@ -143,7 +143,7 @@ func (handler *TeamHandler) UpdateTeamHandler(c *gin.Context) {
 
     // 写入mongo
     // 数据库处理mongo
-    filter := bson.M{"uuid": team.UUID}
+    filter := bson.M{"id": team.ID}
     options := options.FindOneAndUpdate().SetReturnDocument(1)
     update := bson.M{
         "$set": bson.M{
@@ -177,8 +177,8 @@ func (handler *TeamHandler) DeleteTeamHandler(c *gin.Context) {
     var response common.Response
 
     // 请求参数paramater
-    uuid := c.QueryArray("uuid")
-    if len(uuid) == 0 {
+    id := c.QueryArray("id")
+    if len(id) == 0 {
         response.Code = 000102
         response.Message = common.Status[response.Code]
         c.JSON(http.StatusBadRequest, response)
@@ -188,7 +188,7 @@ func (handler *TeamHandler) DeleteTeamHandler(c *gin.Context) {
     // 禁止删除当前登录用户
 
     // 写入mongo
-    filter := bson.M{"uuid": bson.M{"$in": uuid}}
+    filter := bson.M{"id": bson.M{"$in": id}}
     result, err := handler.collection.DeleteMany(handler.ctx, filter)
     if err != nil {
         response.Code = 000204
@@ -244,7 +244,7 @@ func (handler *TeamHandler) RetriveTeamListHandler(c *gin.Context) {
     sortStage := bson.D{{"$sort", sorts}}
 
     // 聚合查询aggregate
-    lookupStage := bson.D{{"$lookup", bson.D{{"from", "user"}, {"localField", "user_uuid"}, {"foreignField", "uuid"}, {"as", "user"}}}}
+    lookupStage := bson.D{{"$lookup", bson.D{{"from", "user"}, {"localField", "user_uuid"}, {"foreignField", "id"}, {"as", "user"}}}}
     setStage := bson.D{{"$set", bson.D{{"user_name", "$user.real_name"}}}}
     projectStage := bson.D{{"$project", bson.D{{"user", 0}}}}
 

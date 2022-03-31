@@ -3,7 +3,6 @@ package user
 import (
     "context"
     "demo/common"
-    "fmt"
     "math"
     "net/http"
     "strconv"
@@ -11,7 +10,7 @@ import (
 
     "github.com/gin-gonic/gin"
     "github.com/go-redis/redis/v8"
-    "github.com/google/uuid"
+    "github.com/rs/xid"
     "go.mongodb.org/mongo-driver/bson"
     "go.mongodb.org/mongo-driver/bson/primitive"
     "go.mongodb.org/mongo-driver/mongo"
@@ -47,7 +46,7 @@ func (handler *UserHandler) CreateUserHandler(c *gin.Context) {
 
     // 请求参数parameter
     if err := c.ShouldBindJSON(&user); err != nil {
-        response.Code = 01001
+        response.Code = 21001
         response.Message = common.Status[response.Code]
         response.Error = err.Error()
         c.JSON(http.StatusBadRequest, response)
@@ -55,15 +54,14 @@ func (handler *UserHandler) CreateUserHandler(c *gin.Context) {
     }
 
     // 数据库处理mongo
-    user.ID = primitive.NewObjectID()
-    user.UUID = uuid.NewString()
+    user._ID = primitive.NewObjectID()
+    user.ID = xid.New().String()
     user.Password = common.SetPassword(user.Password)
     user.CreateAt = time.Now()
     user.UpdateAt = time.Now()
 
-    _, err := handler.collection.InsertOne(handler.ctx, user)
-    if err != nil {
-        response.Code = 02001
+    if _, err := handler.collection.InsertOne(handler.ctx, user); err != nil {
+        response.Code = 22001
         response.Message = common.Status[response.Code]
         response.Error = err.Error()
         c.JSON(http.StatusInternalServerError, response)
@@ -85,9 +83,9 @@ func (handler *UserHandler) RetriveUserHandler(c *gin.Context) {
     var users []UserModel
 
     // 请求参数parameter
-    uuid := c.Query("uuid")
-    if uuid == "" {
-        response.Code = 000102
+    id := c.Query("id")
+    if id == "" {
+        response.Code = 21001
         response.Message = common.Status[response.Code]
         c.JSON(http.StatusBadRequest, response)
         return
@@ -95,14 +93,14 @@ func (handler *UserHandler) RetriveUserHandler(c *gin.Context) {
 
     // 聚合查询aggregate
     // https://docs.mongodb.com/manual/reference/operator/aggregation/lookup/#std-label-lookup-multiple-joins
-    filter := bson.M{"uuid": uuid}
+    filter := bson.M{"id": id}
     matchStage := bson.D{{"$match", filter}}
 
-    lookupStage1 := bson.D{{"$lookup", bson.D{{"from", "team"}, {"localField", "uuid"}, {"foreignField", "user_uuid"}, {"as", "team"}}}}
+    lookupStage1 := bson.D{{"$lookup", bson.D{{"from", "team"}, {"localField", "id"}, {"foreignField", "user_id"}, {"as", "team"}}}}
     unwindStage1 := bson.D{{"$unwind", bson.D{{"path", "$team"}, {"preserveNullAndEmptyArrays", true}}}}
     replaceWithStage1 := bson.D{{"$replaceWith", bson.D{{"$mergeObjects", bson.A{bson.D{{"team_name", "$team.team_name"}}, "$$ROOT"}}}}}
 
-    lookupStage2 := bson.D{{"$lookup", bson.D{{"from", "role"}, {"localField", "uuid"}, {"foreignField", "user_uuid"}, {"as", "role"}}}}
+    lookupStage2 := bson.D{{"$lookup", bson.D{{"from", "role"}, {"localField", "id"}, {"foreignField", "user_id"}, {"as", "role"}}}}
     unwindStage2 := bson.D{{"$unwind", bson.D{{"path", "$role"}, {"preserveNullAndEmptyArrays", true}}}}
     replaceWithStage2 := bson.D{{"$replaceWith", bson.D{{"$mergeObjects", bson.A{bson.D{{"role_name", "$role.role_name"}}, "$$ROOT"}}}}}
 
@@ -113,18 +111,22 @@ func (handler *UserHandler) RetriveUserHandler(c *gin.Context) {
 
     cursor, err := handler.collection.Aggregate(handler.ctx, pipeline, options)
     if err != nil {
+        response.Code = 22002
+        response.Message = common.Status[response.Code]
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
     defer cursor.Close(handler.ctx)
 
     if err = cursor.All(handler.ctx, &users); err != nil {
+        response.Code = 22002
+        response.Message = common.Status[response.Code]
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
 
     // 输出output
-    response.Code = 100200
+    response.Code = 11002
     response.Message = common.Status[response.Code]
     response.Data = users[0]
     c.JSON(http.StatusOK, response)
@@ -139,14 +141,14 @@ func (handler *UserHandler) UpdateUserHandler(c *gin.Context) {
 
     // 请求参数parameter
     if err := c.ShouldBindJSON(&user); err != nil {
-        response.Code = 000101
+        response.Code = 21001
         response.Message = common.Status[response.Code]
         response.Error = err.Error()
         c.JSON(http.StatusBadRequest, response)
     }
 
     // 数据库处理mongo
-    filter := bson.M{"uuid": user.UUID}
+    filter := bson.M{"id": user.ID}
     options := options.FindOneAndUpdate().SetReturnDocument(1)
     update := bson.M{
         "$set": bson.M{
@@ -157,18 +159,16 @@ func (handler *UserHandler) UpdateUserHandler(c *gin.Context) {
         },
     }
 
-    result := handler.collection.FindOneAndUpdate(handler.ctx, filter, update, options)
-    if result == nil {
-        response.Code = 000203
+    if err := handler.collection.FindOneAndUpdate(handler.ctx, filter, update, options).Decode(&user); err != nil {
+        response.Code = 22003
         response.Message = common.Status[response.Code]
-        response.Error = result.Err().Error()
+        response.Error = err.Error()
         c.JSON(http.StatusInternalServerError, response)
         return
     }
-    result.Decode(&user)
 
     // 输出output
-    response.Code = 100300
+    response.Code = 11003
     response.Message = common.Status[response.Code]
     response.Data = user
     c.JSON(http.StatusOK, response)
@@ -181,9 +181,9 @@ func (handler *UserHandler) DeleteUserHandler(c *gin.Context) {
     var response common.Response
 
     // 请求参数paramater
-    uuid := c.QueryArray("uuid")
-    if len(uuid) == 0 {
-        response.Code = 000102
+    id := c.QueryArray("id")
+    if len(id) == 0 {
+        response.Code = 21001
         response.Message = common.Status[response.Code]
         c.JSON(http.StatusBadRequest, response)
         return
@@ -192,7 +192,7 @@ func (handler *UserHandler) DeleteUserHandler(c *gin.Context) {
     // 禁止删除当前登录用户
 
     // 写入mongo
-    filter := bson.M{"uuid": bson.M{"$in": uuid}}
+    filter := bson.M{"id": bson.M{"$in": id}}
     result, err := handler.collection.DeleteMany(handler.ctx, filter)
     if err != nil {
         response.Code = 000204
@@ -269,11 +269,11 @@ func (handler *UserHandler) RetriveUserListHandler(c *gin.Context) {
     sortStage := bson.D{{"$sort", sorts}}
 
     // 聚合查询aggregate
-    lookupStage1 := bson.D{{"$lookup", bson.D{{"from", "team"}, {"localField", "uuid"}, {"foreignField", "user_uuid"}, {"as", "team"}}}}
+    lookupStage1 := bson.D{{"$lookup", bson.D{{"from", "team"}, {"localField", "id"}, {"foreignField", "user_uuid"}, {"as", "team"}}}}
     unwindStage1 := bson.D{{"$unwind", bson.D{{"path", "$team"}, {"preserveNullAndEmptyArrays", true}}}}
     replaceWithStage1 := bson.D{{"$replaceWith", bson.D{{"$mergeObjects", bson.A{bson.D{{"team_name", "$team.team_name"}}, "$$ROOT"}}}}}
 
-    lookupStage2 := bson.D{{"$lookup", bson.D{{"from", "role"}, {"localField", "uuid"}, {"foreignField", "user_uuid"}, {"as", "role"}}}}
+    lookupStage2 := bson.D{{"$lookup", bson.D{{"from", "role"}, {"localField", "id"}, {"foreignField", "user_uuid"}, {"as", "role"}}}}
     unwindStage2 := bson.D{{"$unwind", bson.D{{"path", "$role"}, {"preserveNullAndEmptyArrays", true}}}}
     replaceWithStage2 := bson.D{{"$replaceWith", bson.D{{"$mergeObjects", bson.A{bson.D{{"role_name", "$role.role_name"}}, "$$ROOT"}}}}}
 
@@ -284,7 +284,7 @@ func (handler *UserHandler) RetriveUserListHandler(c *gin.Context) {
 
     cursor, err := handler.collection.Aggregate(handler.ctx, pipeline, options)
     if err != nil {
-        response.Code = 000202
+        response.Code = 22002
         response.Message = common.Status[response.Code]
         response.Error = err.Error()
         c.JSON(http.StatusInternalServerError, response)
@@ -293,7 +293,7 @@ func (handler *UserHandler) RetriveUserListHandler(c *gin.Context) {
     defer cursor.Close(handler.ctx)
 
     if err = cursor.All(handler.ctx, &users); err != nil {
-        response.Code = 000202
+        response.Code = 22002
         response.Message = common.Status[response.Code]
         response.Error = err.Error()
         c.JSON(http.StatusInternalServerError, response)
@@ -309,7 +309,7 @@ func (handler *UserHandler) RetriveUserListHandler(c *gin.Context) {
     }
 
     // 输出output
-    response.Code = 100500
+    response.Code = 11005
     response.Message = common.Status[response.Code]
     response.Data = list
     c.JSON(http.StatusOK, response)
@@ -324,57 +324,50 @@ func (handler *UserHandler) UserLoginHandler(c *gin.Context) {
 
     // 请求参数parameter
     if err := c.ShouldBindJSON(&userLogin); err != nil {
-        response.Code = 01001
+        response.Code = 21001
         response.Message = common.Status[response.Code]
         response.Error = err.Error()
         c.JSON(http.StatusBadRequest, response)
         return
     }
 
-    // 数据库处理mongo （校验密码和锁定）
+    // 数据库处理mongo （校验密码 & 用户激活）
     var user UserModel
-    filter := bson.D{
-        {"$or", bson.A{
-            bson.D{{"mobile", userLogin.LoginID}}, bson.D{{"email", userLogin.LoginID}},
-        }},
-    }
-    result := handler.collection.FindOne(handler.ctx, filter)
+    filter :=
+        bson.D{{"$and", bson.A{
+            bson.D{{"$or", bson.A{
+                bson.D{{"mobile", userLogin.LoginID}},
+                bson.D{{"email", userLogin.LoginID}},
+            }}},
+            bson.D{{"active", 1}},
+        }}}
 
-    if result == nil {
-        response.Code = 02002
-        response.Message = common.Status[response.Code]
-        response.Error = result.Err().Error()
-        c.JSON(http.StatusUnauthorized, response)
-        return
-    }
-    result.Decode(&user)
-
-    // 校验用户密码
-    if err := common.VerifyPassword(user.Password, userLogin.Password); err != nil {
-        response.Code = 10002
+    if err := handler.collection.FindOne(handler.ctx, filter).Decode(&user); err != nil {
+        response.Code = 22002
         response.Message = common.Status[response.Code]
         response.Error = err.Error()
         c.JSON(http.StatusUnauthorized, response)
         return
     }
 
-    uuid := user.UUID
-    // 检查用户锁定
-    if handler.redisClient.SIsMember(handler.ctx, "userblacklist", uuid).Val() {
-        response.Code = 10007
+    // 校验用户密码
+    if err := common.VerifyPassword(user.Password, userLogin.Password); err != nil {
+        response.Code = 22002
         response.Message = common.Status[response.Code]
+        response.Error = err.Error()
         c.JSON(http.StatusUnauthorized, response)
         return
     }
 
     // 生成token
-    tokens, _ := GenerateTokens(uuid)
+    tokens := GenerateTokens(user.ID)
+    tokens["id"] = user.ID
 
     // redis处理 (写入token)
-    handler.redisClient.Set(handler.ctx, uuid+"_"+tokens["access_token"], uuid, time.Minute*5)
+    handler.redisClient.Set(handler.ctx, user.ID, tokens["access_token"], time.Minute*time.Duration(common.Conf.Access_token_exp))
 
     // 输出output
-    response.Code = 100600
+    response.Code = 10000
     response.Message = common.Status[response.Code]
     response.Data = tokens
     c.JSON(http.StatusOK, response)
@@ -389,36 +382,20 @@ func (handler *UserHandler) UserLogoutHandler(c *gin.Context) {
     // 请求参数parameter
     TokenString := c.GetHeader("Authorization")
     if TokenString == "" {
-        response.Code = 000102
+        response.Code = 21001
         response.Message = common.Status[response.Code]
         c.JSON(http.StatusBadRequest, response)
         return
     }
 
-    // 检查token有效性
-    claims, ok := VerifyToken(TokenString)
-    if !ok {
-        response.Code = 100604
-        response.Message = common.Status[response.Code]
-        c.JSON(http.StatusUnauthorized, response)
-        return
-    }
-    uuid := fmt.Sprintf("%v", claims["uuid"])
+    // 从token获得用户id
+    id, _ := ParseToken(TokenString)
 
-    // 检查token白名单
-    keys, _, err := handler.redisClient.Scan(handler.ctx, 0, uuid+"*", 2).Result()
-    if (err != nil) || (len(keys) == 0) {
-        response.Code = 100604
-        response.Message = common.Status[response.Code]
-        c.JSON(http.StatusUnauthorized, response)
-        return
-    }
-
-    // redis处理(删除旧access token)
-    handler.redisClient.Del(handler.ctx, uuid+"_"+TokenString)
+    // redis处理(移除token)
+    handler.redisClient.Del(handler.ctx, id)
 
     // 输出output
-    response.Code = 100700
+    response.Code = 10001
     response.Message = common.Status[response.Code]
     c.JSON(http.StatusOK, response)
 }
@@ -432,58 +409,25 @@ func (handler *UserHandler) UserRefreshHandler(c *gin.Context) {
     // 请求参数parameter
     refreshTokenString := c.GetHeader("Authorization")
     if refreshTokenString == "" {
-        response.Code = 000102
+        response.Code = 01001
         response.Message = common.Status[response.Code]
         c.JSON(http.StatusBadRequest, response)
         return
     }
 
-    // 检查token有效性
-    claims, ok := VerifyToken(refreshTokenString)
-    if !ok {
-        response.Code = 100604
-        response.Message = common.Status[response.Code]
-        c.JSON(http.StatusUnauthorized, response)
-        return
-    }
-    uuid := fmt.Sprintf("%v", claims["uuid"])
-    access_exp := int64(claims["access_exp"].(float64))
-
-    // 检查token白名单
-    keys, _, err := handler.redisClient.Scan(handler.ctx, 0, uuid+"*", 2).Result()
-    if (err != nil) || (len(keys) == 0) {
-        response.Code = 100604
-        response.Message = common.Status[response.Code]
-        c.JSON(http.StatusUnauthorized, response)
-        return
-    }
-
-    // 检查用户黑名单
-    if handler.redisClient.SIsMember(handler.ctx, "userblacklist", uuid).Val() {
-        response.Code = 100603
-        response.Message = common.Status[response.Code]
-        c.JSON(http.StatusUnauthorized, response)
-        return
-    }
-
-    // 检查刷新时间(accessToken必须过期30秒)
-    if time.Now().Sub(time.Unix(access_exp, 0)).Seconds() < 30 {
-        response.Code = 100605
-        response.Message = common.Status[response.Code]
-        c.JSON(http.StatusUnauthorized, response)
-        return
-    }
+    // 从token获得用户id
+    id, _ := ParseToken(refreshTokenString)
 
     // 生成token
-    tokens, _ := GenerateTokens(uuid)
+    tokens := GenerateTokens(id)
+    tokens["id"] = id
 
     // redis处理(删除旧refresh token，增加新token)
-    handler.redisClient.Del(handler.ctx, uuid+"_"+refreshTokenString)
-    handler.redisClient.Set(handler.ctx, uuid+"_"+tokens["access_token"], uuid, time.Minute*5)
-    handler.redisClient.Set(handler.ctx, uuid+"_"+tokens["refresh_token"], uuid, time.Hour*24*7)
+    handler.redisClient.Del(handler.ctx, id)
+    handler.redisClient.Set(handler.ctx, id, tokens["access_token"], time.Minute*time.Duration(common.Conf.Access_token_exp))
 
     // 输出output
-    response.Code = 100800
+    response.Code = 10000
     response.Message = common.Status[response.Code]
     response.Data = tokens
     c.JSON(http.StatusOK, response)
@@ -498,7 +442,7 @@ func (handler *UserHandler) UserChanegePasswordHandler(c *gin.Context) {
 
     // 请求参数paramater
     if err := c.ShouldBindJSON(&userPassword); err != nil {
-        response.Code = 000101
+        response.Code = 01001
         response.Message = common.Status[response.Code]
         response.Error = err.Error()
         c.JSON(http.StatusBadRequest, response)
@@ -507,14 +451,14 @@ func (handler *UserHandler) UserChanegePasswordHandler(c *gin.Context) {
 
     // 查找数据库
     var user UserModel
-    filter := bson.M{"uuid": userPassword.UUID}
+    filter := bson.M{"id": userPassword.ID}
     if result := handler.collection.FindOne(handler.ctx, filter); result != nil {
         result.Decode(&user)
     }
 
     // 校验密码
     if err := common.VerifyPassword(user.Password, userPassword.OldPassword); err != nil {
-        response.Code = 100602
+        response.Code = 10002
         response.Message = common.Status[response.Code]
         response.Error = err.Error()
         c.JSON(http.StatusUnauthorized, response)
@@ -538,22 +482,15 @@ func (handler *UserHandler) UserChanegePasswordHandler(c *gin.Context) {
         return
     }
 
-    uuid := user.UUID
-
     // 生成token
-    tokens, _ := GenerateTokens(uuid)
+    tokens := GenerateTokens(user.ID)
+    tokens["id"] = user.ID
 
-    // redis处理 (删除旧token，增加新token)
-    keys, _, _ := handler.redisClient.Scan(handler.ctx, 0, uuid+"*", 2).Result()
-    for _, key := range keys {
-        handler.redisClient.Del(handler.ctx, key)
-    }
-
-    handler.redisClient.Set(handler.ctx, uuid+"_"+tokens["access_token"], uuid, time.Minute*5)
-    handler.redisClient.Set(handler.ctx, uuid+"_"+tokens["refresh_token"], uuid, time.Hour*24*7)
+    // redis处理 (写入token)
+    handler.redisClient.Set(handler.ctx, user.ID, tokens["access_token"], time.Minute*time.Duration(common.Conf.Access_token_exp))
 
     // 输出output
-    response.Code = 100900
+    response.Code = 10000
     response.Message = common.Status[response.Code]
     response.Data = tokens
     c.JSON(http.StatusOK, response)
@@ -566,9 +503,9 @@ func (handler *UserHandler) UserBlackListAddHandler(c *gin.Context) {
     var response common.Response
 
     // 请求参数paramater
-    uuid := c.QueryArray("uuid")
-    if len(uuid) == 0 {
-        response.Code = 000102
+    id := c.QueryArray("id")
+    if len(id) == 0 {
+        response.Code = 01001
         response.Message = common.Status[response.Code]
         c.JSON(http.StatusBadRequest, response)
         return
@@ -576,10 +513,10 @@ func (handler *UserHandler) UserBlackListAddHandler(c *gin.Context) {
 
     // 禁止加黑当前登录用户
 
-    // redis
-    _, err := handler.redisClient.SAdd(handler.ctx, "userblacklist", uuid).Result()
+    // redis处理 (写入UserLock)
+    _, err := handler.redisClient.SAdd(handler.ctx, "UserLock", id).Result()
     if err == redis.Nil {
-        response.Code = 000301
+        response.Code = 03001
         response.Message = common.Status[response.Code]
         response.Error = err.Error()
         c.JSON(http.StatusInternalServerError, response)
@@ -587,7 +524,7 @@ func (handler *UserHandler) UserBlackListAddHandler(c *gin.Context) {
     }
 
     // 输出output
-    response.Code = 101000
+    response.Code = 10000
     response.Message = common.Status[response.Code]
     c.JSON(http.StatusOK, response)
 }
@@ -599,9 +536,9 @@ func (handler *UserHandler) UserBlackListRetriveHandler(c *gin.Context) {
     var response common.Response
 
     // redis
-    _, err := handler.redisClient.SMembers(handler.ctx, "userblacklist").Result()
+    _, err := handler.redisClient.SMembers(handler.ctx, "UserLock").Result()
     if err == redis.Nil {
-        response.Code = 000302
+        response.Code = 03002
         response.Message = common.Status[response.Code]
         response.Error = err.Error()
         c.JSON(http.StatusInternalServerError, response)
@@ -609,7 +546,7 @@ func (handler *UserHandler) UserBlackListRetriveHandler(c *gin.Context) {
     }
 
     // 输出output
-    response.Code = 101100
+    response.Code = 10000
     response.Message = common.Status[response.Code]
     c.JSON(http.StatusOK, response)
 }
@@ -621,18 +558,18 @@ func (handler *UserHandler) UserBlackListRemoveHandler(c *gin.Context) {
     var response common.Response
 
     // 请求参数paramater
-    uuid := c.QueryArray("uuid")
-    if len(uuid) == 0 {
-        response.Code = 000102
+    id := c.QueryArray("id")
+    if len(id) == 0 {
+        response.Code = 01001
         response.Message = common.Status[response.Code]
         c.JSON(http.StatusBadRequest, response)
         return
     }
 
     // redis
-    _, err := handler.redisClient.SRem(handler.ctx, "userblacklist", uuid).Result()
+    _, err := handler.redisClient.SRem(handler.ctx, "userblacklist", id).Result()
     if err == redis.Nil {
-        response.Code = 000304
+        response.Code = 03004
         response.Message = common.Status[response.Code]
         response.Error = err.Error()
         c.JSON(http.StatusInternalServerError, response)
@@ -640,7 +577,7 @@ func (handler *UserHandler) UserBlackListRemoveHandler(c *gin.Context) {
     }
 
     // 输出output
-    response.Code = 101200
+    response.Code = 10000
     response.Message = common.Status[response.Code]
     c.JSON(http.StatusOK, response)
 }
