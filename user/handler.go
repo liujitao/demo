@@ -18,7 +18,7 @@ import (
 )
 
 /*
-用户类型
+结构体类型
 */
 type UserHandler struct {
     ctx         context.Context
@@ -29,7 +29,7 @@ type UserHandler struct {
 /*
 构造方法
 */
-func MewUserHandler(ctx context.Context, collection *mongo.Collection, redisClient *redis.Client) *UserHandler {
+func NewUserHandler(ctx context.Context, collection *mongo.Collection, redisClient *redis.Client) *UserHandler {
     return &UserHandler{
         ctx:         ctx,
         collection:  collection,

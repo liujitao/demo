@@ -17,7 +17,7 @@ import (
 )
 
 /*
-用户类型
+结构体类型
 */
 type RoleHandler struct {
     ctx        context.Context
@@ -27,7 +27,7 @@ type RoleHandler struct {
 /*
 构造方法
 */
-func MewRoleHandler(ctx context.Context, collection *mongo.Collection) *RoleHandler {
+func NewRoleHandler(ctx context.Context, collection *mongo.Collection) *RoleHandler {
     return &RoleHandler{
         ctx:        ctx,
         collection: collection,

@@ -41,11 +41,26 @@ docker run -d \
     --network my-net \
     demo-app:v1
 
-
-
 mongoimport --uri=mongodb://demo:demo@127.0.0.1:27017/demo?authSource=admin -c user --file /data/workspace/demo-app/common/userData.json --jsonArray --drop
 mongoimport --uri=mongodb://demo:demo@127.0.0.1:27017/demo?authSource=admin -c team --file /data/workspace/demo-app/common/teamData.json --jsonArray --drop 
 mongoimport --uri=mongodb://demo:demo@127.0.0.1:27017/demo?authSource=admin -c role --file /data/workspace/demo-app/common/roleData.json --jsonArray --drop 
+mongoimport --uri=mongodb://demo:demo@127.0.0.1:27017/demo?authSource=admin -c route --file /data/workspace/demo-app/common/routeData.json --jsonArray --drop 
 
-docker run -d --name mongo-express --network my-net -e ME_CONFIG_MONGODB_ADMINUSERNAME='admin' -e ME_CONFIG_MONGODB_ADMINPASSWORD='password' -p 8081:8081 mongo-express:0.54
+
+docker run -d --name mongo-express --network my-net -e ME_CONFIG_MONGODB_ADMINUSERNAME='admin' -e ME_CONFIG_MONGODB_ADMINPASSWORD='password' -e ME_CONFIG_MONGODB_SERVER='my-mongodb' -p 8081:8081 mongo-express:latest
 docker run -d --name redisinsight --network my-net redis -p 8001:8001 redislabs/redisinsight
+
+
+db.user.aggregate([
+    { $match: { "id": "c9163c5gfvm2hkhv1hhg" } },
+    { $lookup: { from: "role", localField: "id", foreignField: "user_id", as: "role" } }
+]).pretty()
+
+db.user.aggregate([
+    { $match: { "id": "c9163c5gfvm2hkhv1hhg" } },
+    { $lookup: { from: "role", localField: "id", foreignField: "user_id", as: "role" } },
+    { $unwind : "$role" }
+]).pretty()
+
+https://www.mongodb.com/docs/v4.4/reference/operator/aggregation/lookup/
+https://www.docs4dev.com/docs/zh/mongodb/v3.6/reference/reference-operator-aggregation-pipeline.html

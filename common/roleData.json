@@ -1,8 +1,17 @@
 [
     {
         "id": "c9163ilgfvm2iriblga0",
-        "role_name": "团队经理",
-        "describe": "读写",
+        "role_name": "admin",
+        "describe": "管理员",
+        "user_id": [
+            "c9163c5gfvm2hkhv1hhg",
+            "c9163c5gfvm2hkhv1hi0"
+        ]
+    },
+    {
+        "id": "c9163ilgfvm2iriblgaz",
+        "role_name": "developer",
+        "describe": "开发",
         "user_id": [
             "c9163c5gfvm2hkhv1hhg",
             "c9163c5gfvm2hkhv1hi0"
@@ -10,8 +19,8 @@
     },
     {
         "id": "c9163ilgfvm2iriblgag",
-        "role_name": "团队员工",
-        "describe": "只读",
+        "role_name": "editor",
+        "describe": "编辑",
         "user_id": [
             "c9163c5gfvm2hkhv1hj0",
             "c9163c5gfvm2hkhv1hjg",

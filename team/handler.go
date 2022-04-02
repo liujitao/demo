@@ -17,7 +17,7 @@ import (
 )
 
 /*
-用户类型
+结构体类型
 */
 type TeamHandler struct {
     ctx        context.Context
@@ -27,7 +27,7 @@ type TeamHandler struct {
 /*
 构造方法
 */
-func MewTeamHandler(ctx context.Context, collection *mongo.Collection) *TeamHandler {
+func NewTeamHandler(ctx context.Context, collection *mongo.Collection) *TeamHandler {
     return &TeamHandler{
         ctx:        ctx,
         collection: collection,

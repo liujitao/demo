@@ -3,6 +3,7 @@ package main
 import (
     "context"
     "demo/common"
+    "demo/permission"
     "demo/role"
     "demo/team"
     "demo/user"
@@ -19,6 +20,7 @@ import (
 var userHandler *user.UserHandler
 var teamHandler *team.TeamHandler
 var roleHandler *role.RoleHandler
+var routeHandler *permission.PermissionHandler
 
 // 初始化
 func init() {
@@ -49,9 +51,10 @@ func init() {
     db := client.Database(common.Conf.Mongo_database)
 
     // 初始化handler
-    userHandler = user.MewUserHandler(ctx, db.Collection("user"), redisClient)
-    teamHandler = team.MewTeamHandler(ctx, db.Collection("team"))
-    roleHandler = role.MewRoleHandler(ctx, db.Collection("role"))
+    userHandler = user.NewUserHandler(ctx, db.Collection("user"), redisClient)
+    teamHandler = team.NewTeamHandler(ctx, db.Collection("team"))
+    roleHandler = role.NewRoleHandler(ctx, db.Collection("role"))
+    routeHandler = permission.NewRouteHandler(ctx, db.Collection("route"))
 }
 
 func main() {
@@ -100,6 +103,7 @@ func main() {
     {
         unauthorized.POST("/user/register", userHandler.CreateUserHandler)
         unauthorized.POST("/user/login", userHandler.UserLoginHandler)
+        unauthorized.GET("/permission/routes", routeHandler.RetriveRouteHandler)
 
     }
 

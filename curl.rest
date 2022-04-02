@@ -16,8 +16,8 @@ Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ0Mzg2
 }
 
 ### retrive user
-GET http://{{host}}:{{port}}/{{version}}/user?id=b040904e-8a30-11ec-917a-17ee5f1bcd74 HTTP/1.1
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NDg2MjI4MzYsImlkIjoiYzkxNjNjNWdmdm0yaGtodjFoaGcifQ.0j4Xrsnz_b-8J9q67xSADV_0UtsUO2LT_bqiePegNiQ
+GET http://{{host}}:{{port}}/{{version}}/user?id=c9163c5gfvm2hkhv1hhg HTTP/1.1
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NDg4MDE5OTcsImlkIjoiYzkxNjNjNWdmdm0yaGtodjFoaGcifQ.T_TKDOGfv8yMoHe342pW4DEzyp05DIYjGw8Fcr1cd0s
 
 ### update user
 PUT http://{{host}}:{{port}}/user HTTP/1.1
@@ -54,7 +54,7 @@ GET http://{{host}}:{{port}}/{{version}}/user/logout HTTP/1.1
 Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NDg2OTI2MzgsImlkIjoiYzkxNjNjNWdmdm0yaGtodjFoaGcifQ.Ya_Y7WKJqKOm2vZZiTVMzzafUUm9Iye9vAU_VmkFQpY
 
 ### user refresh
-GET http://{{host}}:{{port}}/user/{{version}}/refresh HTTP/1.1
+GET http://{{host}}:{{port}}/user/{{version}}/user/refresh HTTP/1.1
 Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQxODg3MjYxLCJyZWZyZXNoX2V4cCI6MTY0MjQ5MTc2MSwidXNlcl9pZCI6IjYxY2Q0N2IzMzhlNGFjYmQ0MzA2NWMxMSJ9.W_La-15ZPMWkxOsiXUUgLG4yI-epAxSn3y3Jdn6xph0
 
 
@@ -128,3 +128,6 @@ Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ0ODAw
 ### retrive role list
 GET http://{{host}}:{{port}}/role/list?pageIndex=1&pageSize=20&sort[role_name]=1 HTTP/1.1
 Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfZXhwIjoxNjQ0ODAwNDQ3LCJhZG1pbiI6dHJ1ZSwidXVpZCI6ImIwNDdkOTZjLThhMzAtMTFlYy04NmJiLTQ3NjM3Y2M5NWFkZCJ9.FKRLB5G50YbxAPUpCfxMQkicrtbBtzuFot_uUINt3cI
+
+### retrive permission route
+GET http://{{host}}:{{port}}/{{version}}/permission/route HTTP/1.1

@@ -9,6 +9,7 @@ import (
 type TeamModel struct {
     _ID       primitive.ObjectID `json:"_id" bson:"_id"`
     ID        string             `json:"id" bson:"id"`
+    ParentID  string             `json:"parent_id" bson:"parent_id"`
     TeamName  string             `json:"team_name" bson:"team_name"`
     Describe  string             `json:"describe" bson:"describe"`
     Active    int64              `json:"active" bson:"active"`
